@@ -6,7 +6,7 @@ button {
   border: 1px solid #FFFFFF;
   border-radius: 10px;
   color: white;
-  width: 935px;
+  width: 100%;
 }
 
 textarea, input {
@@ -16,5 +16,5 @@ textarea, input {
   border-radius: 10px;
   border: 1px solid #FFFFFF;
   background-color: lightgrey;
-  width: 965px;
+  width: 96.7%;
 }
