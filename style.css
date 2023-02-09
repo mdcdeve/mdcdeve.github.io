@@ -3,10 +3,10 @@ button {
   font-size: 50px;
   font-weight: bold;
   background-color: lightblue;
-  border: none;
+  border: 1px solid #FFFFFF;
   border-radius: 10px;
   color: white;
-  width: 730px;
+  width: 935px;
 }
 
 textarea, input {
@@ -14,7 +14,7 @@ textarea, input {
   font-size: 40px;
   font-weight: bold;
   border-radius: 10px;
-  border: none;
+  border: 1px solid #FFFFFF;
   background-color: lightgrey;
-  width: 700px;
+  width: 965px;
 }
