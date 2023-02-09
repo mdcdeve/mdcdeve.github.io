@@ -19,5 +19,7 @@ submitButton.addEventListener("click", async (event) => {
 
   const data = await response.json();
 
-  output.innerHTML = `Short Boy ~ <a href="${data.link}">${data.link}</a>`;
+  output.innerHTML = `Short Boy ~ <a href="${data.link}">${data.link}</a> ~ Short Boy`;
+  
+  copyToClipboard(data.link);
 });
