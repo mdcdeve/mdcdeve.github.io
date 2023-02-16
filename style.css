@@ -7,19 +7,20 @@ button {
   font-size: 50px;
   font-weight: bold;
   background-color: lightblue;
-  border: 1px solid #FFFFFF;
+  border: 1px solid #ffffff;
   border-radius: 10px;
   color: white;
   width: 100%;
   font-family: Arial;
 }
 
-textarea, input {
+textarea,
+input {
   padding: 15px;
   font-size: 40px;
   font-weight: bold;
   border-radius: 10px;
-  border: 1px solid #FFFFFF;
+  border: 1px solid #ffffff;
   background-color: lightgrey;
   width: 96.7%;
   font-family: Arial;
@@ -31,7 +32,7 @@ div {
   font-size: 40px;
   font-weight: bold;
   border-radius: 10px;
-  border: 1px solid #FFFFFF;
+  border: 1px solid #ffffff;
   background-color: lightgrey;
   width: 96.7%;
   font-family: Arial;
