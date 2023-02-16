@@ -15,18 +15,7 @@ button {
 }
 
 textarea,
-input {
-  padding: 15px;
-  font-size: 40px;
-  font-weight: bold;
-  border-radius: 10px;
-  border: 1px solid #ffffff;
-  background-color: lightgrey;
-  width: 96.7%;
-  font-family: Arial;
-  color: #333333;
-}
-
+input,
 div {
   padding: 15px;
   font-size: 40px;
