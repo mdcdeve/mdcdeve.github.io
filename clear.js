@@ -1,10 +1,7 @@
 function clearElements() {
-  // Empty input textbox
-  document.getElementById("input").value = "";
-
-  // Empty output textbox
-  document.getElementById("output").value = "";
-
-  // Empty bitlyshort div
+  const input = document.getElementById("input");
+  const output = document.getElementById("output");
+  input.value = "";
+  output.value = "";
   document.getElementById("bitlyshort").innerHTML = "";
 }
