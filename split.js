@@ -9,8 +9,9 @@ function splitString() {
     "lego.com": "https://click.linksynergy.com/deeplink?id=IdYcgGrVl44&mid=13923&murl=",
     "booksamillion.com": "https://www.tkqlhce.com/click-8310556-11552245?url=",
     "walmart.com": "https://goto.walmart.com/c/899674/565706/9383?veh=aff&sourceid=imp_000011112222333344&u=",
-    "target.com": "https://www.ojrq.net/p/?return=https://goto.target.com/c/373031/81938/2092?u=",
-    "bestbuy.com": "https://bestbuy.7tiv.net/c/373031/614286/10014?u="
+    "target.com": "https://goto.target.com/c/373031/81938/2092?u=",
+    "bestbuy.com": "https://bestbuy.7tiv.net/c/373031/614286/10014?u=",
+    "amazon.com": "?&linkCode=ll1&tag=fupone-20&linkId=7fd95c65fd643211a87550fcef50c597&language=en_US&ref_=as_li_ss_tl"
   };
 
   let part1 = "Nope";
@@ -18,7 +19,11 @@ function splitString() {
     const [url, queryString] = input.split("?");
     for (const storeUrl of Object.keys(stores)) {
       if (url.includes(storeUrl)) {
-        part1 = stores[storeUrl] + url;
+        if (storeUrl === "amazon.com") {
+          part1 = url + stores[storeUrl]; // Append "hello" to the URL for amazon.com
+        } else {
+          part1 = stores[storeUrl] + url;
+        }
         break;
       }
     }
