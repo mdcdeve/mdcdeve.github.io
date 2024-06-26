@@ -1,8 +1,6 @@
 document.getElementById('fetchButton').addEventListener('click', function() {
     const urlInput = document.getElementById('urlInput').value;
     const urlList = document.getElementById('urlList');
-    const dataIframe = document.getElementById('dataIframe');
-    
     urlList.innerHTML = '';
 
     if (!urlInput) {
@@ -10,18 +8,19 @@ document.getElementById('fetchButton').addEventListener('click', function() {
         return;
     }
 
-    dataIframe.src = urlInput;
-
-    dataIframe.onload = function() {
-        try {
-            const iframeDocument = dataIframe.contentDocument || dataIframe.contentWindow.document;
-            const jsonData = JSON.parse(iframeDocument.body.innerText);
-
+    fetch(urlInput)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
             const baseURL = 'https://funko.com/dw/image/v2/BGTS_PRD/';
 
             const urls = [];
-            if (jsonData.product && jsonData.product.images && jsonData.product.images['hi-res']) {
-                const hiResImages = jsonData.product.images['hi-res'];
+            if (data.product && data.product.images && data.product.images['hi-res']) {
+                const hiResImages = data.product.images['hi-res'];
                 hiResImages.forEach(image => {
                     if (image.url) {
                         let fullUrl = image.url;
@@ -55,12 +54,8 @@ document.getElementById('fetchButton').addEventListener('click', function() {
             } else {
                 urlList.innerHTML = '<li>No URLs found</li>';
             }
-        } catch (error) {
-            urlList.innerHTML = `<li>Error parsing JSON data: ${error.message}</li>`;
-        }
-    };
-
-    dataIframe.onerror = function() {
-        urlList.innerHTML = '<li>Error loading JSON URL</li>';
-    };
+        })
+        .catch(error => {
+            urlList.innerHTML = `<li>Error fetching JSON data: ${error.message}</li>`;
+        });
 });
