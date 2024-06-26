@@ -8,7 +8,10 @@ document.getElementById('fetchButton').addEventListener('click', function() {
         return;
     }
 
-    fetch(urlInput)
+    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+    const targetUrl = proxyUrl + urlInput;
+
+    fetch(targetUrl)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
