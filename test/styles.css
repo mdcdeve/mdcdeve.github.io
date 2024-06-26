@@ -55,3 +55,17 @@ li {
     padding: 10px;
     border: 1px solid #ddd;
 }
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
