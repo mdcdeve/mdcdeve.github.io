@@ -11,18 +11,10 @@ document.getElementById('upload').addEventListener('change', function(event) {
                 canvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
 
-                const pica = window.pica();
-                const outputCanvas = document.createElement('canvas');
-                outputCanvas.width = img.width;
-                outputCanvas.height = img.height;
-
-                pica.resize(canvas, outputCanvas)
-                    .then(() => pica.toBlob(outputCanvas, 'image/jpeg', 1.0))
-                    .then((blob) => {
-                        const url = URL.createObjectURL(blob);
-                        document.getElementById('output').src = url;
-                    })
-                    .catch((error) => console.error(error));
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    document.getElementById('output').src = url;
+                }, 'image/jpeg', 1.0);
             }
             img.src = e.target.result;
         }
