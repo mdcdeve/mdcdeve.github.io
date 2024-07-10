@@ -10,8 +10,19 @@ document.getElementById('upload').addEventListener('change', function(event) {
                 canvas.width = img.width;
                 canvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
-                const jpgDataUrl = canvas.toDataURL('image/jpeg', 1.0);
-                document.getElementById('output').src = jpgDataUrl;
+
+                const pica = window.pica();
+                const outputCanvas = document.createElement('canvas');
+                outputCanvas.width = img.width;
+                outputCanvas.height = img.height;
+
+                pica.resize(canvas, outputCanvas)
+                    .then(() => pica.toBlob(outputCanvas, 'image/jpeg', 1.0))
+                    .then((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        document.getElementById('output').src = url;
+                    })
+                    .catch((error) => console.error(error));
             }
             img.src = e.target.result;
         }
