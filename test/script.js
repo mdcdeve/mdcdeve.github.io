@@ -1,6 +1,4 @@
-// script.js
-
-document.getElementById('extractButton').addEventListener('click', async function() {
+document.getElementById('extractButton').addEventListener('click', function() {
     const jsonInput = document.getElementById('jsonInput').value;
     const urlList = document.getElementById('urlList');
     urlList.innerHTML = '';
@@ -12,43 +10,37 @@ document.getElementById('extractButton').addEventListener('click', async functio
         const urls = [];
         if (data.product && data.product.images && data.product.images['hi-res']) {
             const hiResImages = data.product.images['hi-res'];
-            hiResImages.forEach(async image => {
+            hiResImages.forEach(image => {
                 if (image.url) {
                     let fullUrl = image.url;
                     if (!fullUrl.startsWith(baseURL)) {
                         fullUrl = baseURL + fullUrl;
                     }
-
-                    try {
-                        // Fetch Base64 encoded image from server
-                        const response = await fetch(`/fetchImage?imageUrl=${encodeURIComponent(fullUrl)}`);
-                        const { dataUrl } = await response.json();
-
-                        // Create UI elements
-                        const listItem = document.createElement('li');
-                        const link = document.createElement('a');
-                        link.href = fullUrl;
-                        link.textContent = fullUrl;
-                        link.target = '_blank'; // Open link in a new tab
-
-                        const imageElem = document.createElement('img');
-                        imageElem.src = dataUrl; // Use Base64 data URL
-                        imageElem.alt = 'Image';
-                        imageElem.style.display = 'block';
-                        imageElem.style.marginTop = '10px';
-                        imageElem.style.maxWidth = '100%';
-
-                        listItem.appendChild(link);
-                        listItem.appendChild(imageElem);
-                        urlList.appendChild(listItem);
-                    } catch (error) {
-                        console.error('Error fetching Base64 image:', error);
-                    }
+                    urls.push(fullUrl);
                 }
             });
         }
 
-        if (urls.length === 0) {
+        if (urls.length > 0) {
+            urls.forEach(url => {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = url;
+                link.textContent = url;
+                link.target = '_blank'; // Open link in a new tab
+
+                const image = document.createElement('img');
+                image.src = url;
+                image.alt = 'Image';
+                image.style.display = 'block';
+                image.style.marginTop = '10px';
+                image.style.maxWidth = '100%';
+
+                listItem.appendChild(link);
+                listItem.appendChild(image);
+                urlList.appendChild(listItem);
+            });
+        } else {
             urlList.innerHTML = '<li>No URLs found</li>';
         }
     } catch (error) {
