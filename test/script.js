@@ -23,27 +23,70 @@ document.getElementById('extractButton').addEventListener('click', function() {
 
         if (urls.length > 0) {
             urls.forEach(url => {
-                const listItem = document.createElement('li');
-                const link = document.createElement('a');
-                link.href = url;
-                link.textContent = url;
-                link.target = '_blank'; // Open link in a new tab
-
-                const image = document.createElement('img');
-                image.src = url;
-                image.alt = 'Image';
-                image.style.display = 'block';
-                image.style.marginTop = '10px';
-                image.style.maxWidth = '100%';
-
-                listItem.appendChild(link);
-                listItem.appendChild(image);
-                urlList.appendChild(listItem);
+                // Convert PNG to JPEG if needed
+                if (url.endsWith('.png')) {
+                    convertPngToJpg(url)
+                        .then(jpegBlob => {
+                            const imageUrl = URL.createObjectURL(jpegBlob);
+                            displayUrlWithImage(url, imageUrl);
+                        })
+                        .catch(error => {
+                            console.error('Conversion failed:', error);
+                            displayUrlWithImage(url, url); // Display original PNG as fallback
+                        });
+                } else {
+                    displayUrlWithImage(url, url);
+                }
             });
         } else {
             urlList.innerHTML = '<li>No URLs found</li>';
         }
     } catch (error) {
-        urlList.innerHTML = '<li>Invalid JSON data</li>';
+        console.error('JSON parsing error:', error);
+        urlList.innerHTML = `<li>Invalid JSON data: ${error.message}</li>`;
     }
 });
+
+// Function to convert PNG to JPEG using Canvas
+function convertPngToJpg(pngUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // Enable CORS
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob(blob => {
+                resolve(blob);
+            }, 'image/jpeg', 0.9); // Quality 0.9 (90%)
+        };
+        img.onerror = function(error) {
+            reject(error);
+        };
+        img.src = pngUrl;
+    });
+}
+
+// Function to display URL with image in the list
+function displayUrlWithImage(url, imageUrl) {
+    const listItem = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = url;
+    link.textContent = url;
+    link.target = '_blank'; // Open link in a new tab
+
+    const image = document.createElement('img');
+    image.src = imageUrl;
+    image.alt = 'Image';
+    image.style.display = 'block';
+    image.style.marginTop = '10px';
+    image.style.maxWidth = '100%';
+
+    listItem.appendChild(link);
+    listItem.appendChild(image);
+    urlList.appendChild(listItem);
+}
