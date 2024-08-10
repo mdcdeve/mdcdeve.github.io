@@ -3,7 +3,7 @@ function splitString() {
   const stores = {
     "hottopic.com": "https://www.dpbolvw.net/click-8310556-12641438?url=",
     "boxlunch.com": "https://www.tkqlhce.com/click-8310556-12695057?url=",
-    "shopdisney.com": "https://www.tkqlhce.com/click-8310556-13227368?url=",
+    "disneystore.com/": "https://www.anrdoezrs.net/click-8310556-11554175?url=",
     "gamestop.com": "https://click.linksynergy.com/deeplink?id=IdYcgGrVl44&mid=24348&murl=",
     "walgreens.com": "https://www.jdoqocy.com/click-8310556-11553095?url=",
     "lego.com": "https://click.linksynergy.com/deeplink?id=IdYcgGrVl44&mid=13923&murl=",
