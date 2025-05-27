@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funko Image Extractor (Advanced)</title>
+    <title>Funko Image & Details Extractor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7fafc; /* Tailwind gray-100 */
+            color: #1f2937; /* Tailwind gray-800 */
+            transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
         }
         .loader, .image-loader-spinner {
             border: 4px solid #e5e7eb; /* Tailwind gray-200 */
@@ -19,7 +21,7 @@
             height: 24px;
             animation: spin 1s linear infinite;
         }
-        .image-loader-spinner { width: 32px; height: 32px; } /* Larger for images */
+        .image-loader-spinner { width: 32px; height: 32px; }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -33,12 +35,12 @@
         }
         .image-container {
             background-color: #f9fafb; /* Tailwind gray-50 */
-            aspect-ratio: 1 / 1; /* Make it square */
+            aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 0.375rem; /* Tailwind rounded-md */
-            overflow: hidden; /* Ensure img corners are also rounded if img itself is square */
+            border-radius: 0.375rem;
+            overflow: hidden;
         }
         .image-container img {
             max-height: 100%;
@@ -63,18 +65,80 @@
                 transform: translateY(0);
             }
         }
+
+        .details-container {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background-color: #f9fafb; 
+            border: 1px solid #e5e7eb; 
+            border-radius: 0.375rem; 
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        .details-container h4 { font-weight: 600; color: #4b5563; margin-bottom: 0.25rem; }
+        .details-container p, .details-container div { margin-bottom: 0.5rem; color: #374151; }
+        .details-container .description-text { max-height: 150px; overflow-y: auto; padding-right: 5px; }
+        .details-toggle-button { background-color: #e5e7eb; color: #374151; transition: background-color 0.2s ease; }
+        .details-toggle-button:hover { background-color: #d1d5db; }
+        .details-toggle-button svg { transition: transform 0.3s ease; }
+        .details-toggle-button.open svg { transform: rotate(180deg); }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #111827; /* Tailwind gray-900 */
+            color: #d1d5db; /* Tailwind gray-300 */
+        }
+        .dark-mode .main-content-card {
+            background-color: #1f2937; /* Tailwind gray-800 */
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.4);
+        }
+        .dark-mode #mainHeader, .dark-mode #subHeader { color: #f3f4f6; /* Tailwind gray-100 */ }
+        .dark-mode #mainHeaderIcon { color: #60a5fa; /* Tailwind blue-400 */ }
+        .dark-mode label { color: #d1d5db; /* Tailwind gray-300 */ }
+        .dark-mode textarea, .dark-mode input {
+            background-color: #374151; /* Tailwind gray-700 */
+            border-color: #4b5563; /* Tailwind gray-600 */
+            color: #f3f4f6;
+        }
+        .dark-mode textarea::placeholder { color: #9ca3af; /* Tailwind gray-400 */ }
+        .dark-mode .status-success { background-color: #064e3b; color: #a7f3d0; border-color: #059669; }
+        .dark-mode .status-error   { background-color: #7f1d1d; color: #fecdd3; border-color: #ef4444; }
+        .dark-mode .status-info    { background-color: #1e3a8a; color: #bfdbfe; border-color: #60a5fa; }
+        .dark-mode .status-warning { background-color: #713f12; color: #fde68a; border-color: #f59e0b; }
+        .dark-mode .pid-result-block { background-color: #374151; border-color: #4b5563; }
+        .dark-mode .pid-result-block h3 { color: #f3f4f6; }
+        .dark-mode .pid-status-message p { color: #d1d5db; } /* General text in status */
+        .dark-mode .pid-status-message .text-red-600 { color: #fca5a5; } /* Lighter red */
+        .dark-mode .pid-status-message .text-green-600 { color: #6ee7b7; } /* Lighter green */
+        .dark-mode .pid-status-message .text-blue-600 { color: #93c5fd; } /* Lighter blue */
+        .dark-mode .pid-status-message .text-yellow-600 { color: #fde047; } /* Lighter yellow */
+        .dark-mode .image-item { background-color: #4b5563; border-color: #6b7280; }
+        .dark-mode .image-container { background-color: #374151; }
+        .dark-mode .image-item a.text-blue-600 { color: #93c5fd; } /* Lighter blue for links */
+        .dark-mode .image-item a.text-blue-600:hover { color: #60a5fa; }
+        .dark-mode .details-container { background-color: #374151; border-color: #4b5563; }
+        .dark-mode .details-container h4 { color: #e5e7eb; /* gray-200 */ }
+        .dark-mode .details-container p, .dark-mode .details-container div { color: #d1d5db; /* gray-300 */ }
+        .dark-mode .details-toggle-button { background-color: #4b5563; color: #f3f4f6; }
+        .dark-mode .details-toggle-button:hover { background-color: #6b7280; }
+        .dark-mode #emptyStateResults { border-color: #4b5563; }
+        .dark-mode #emptyStateResults svg { color: #6b7280; /* gray-500 */ }
+        .dark-mode #emptyStateResults h3 { color: #9ca3af; /* gray-400 */ }
+        .dark-mode #emptyStateResults p { color: #6b7280; /* gray-500 */ }
+        .dark-mode footer p { color: #9ca3af; /* gray-400 */ }
+        .dark-mode code { background-color: #4b5563; color: #93c5fd; }
     </style>
 </head>
 <body class="text-gray-800 antialiased">
     <div class="container mx-auto max-w-3xl px-4 py-8 md:py-12">
-        <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+        <div id="mainCard" class="main-content-card bg-white p-6 md:p-8 rounded-xl shadow-2xl transition-shadow duration-300">
             <header class="mb-8 text-center">
-                <svg class="w-16 h-16 text-blue-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <h1 class="text-4xl font-bold text-gray-800">Funko Image Extractor</h1>
-                <p class="text-gray-600 mt-2 text-lg">
+                <svg id="mainHeaderIcon" class="w-16 h-16 text-blue-600 mx-auto mb-3 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <h1 id="mainHeader" class="text-4xl font-bold text-gray-800 transition-colors duration-300">Funko Image & Details Extractor</h1>
+                <p id="subHeader" class="text-gray-600 mt-2 text-lg transition-colors duration-300">
                     Enter Funko Product IDs (PIDs) to fetch content via
                     <code class="bg-blue-100 text-blue-700 px-1 py-0.5 rounded text-sm">corsproxy.io</code>
-                    and extract product images (JPG/PNG only).
+                    and extract product images & details.
                 </p>
             </header>
 
@@ -83,16 +147,23 @@
                 <textarea id="funkoPidTextarea" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow" rows="3" placeholder="Enter PIDs, separated by commas, spaces, or new lines (e.g., 84946, 72406)"></textarea>
             </div>
 
-            <div class="flex space-x-4">
-                <button id="fetchButton" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300 ease-in-out text-lg flex items-center justify-center">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button id="fetchButton" class="md:col-span-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300 ease-in-out text-lg flex items-center justify-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    Fetch and Extract Images
-                </button>
-                <button id="clearResultsButton" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300 ease-in-out text-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Clear Results
+                    Fetch and Extract
                 </button>
             </div>
+            <div class="flex justify-between items-center">
+                <button id="clearResultsButton" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300 ease-in-out text-sm flex items-center justify-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Clear Results
+                </button>
+                <button id="darkModeToggle" title="Switch to Dark Mode" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-bold p-2 rounded-full shadow-md hover:shadow-lg transform hover:scale-110 transition duration-300 ease-in-out text-sm flex items-center justify-center">
+                    <svg id="darkModeIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path> </svg>
+                </button>
+            </div>
+
 
             <div id="statusArea" class="mt-6 min-h-[60px]">
                 </div>
@@ -110,8 +181,15 @@
         const funkoPidTextarea = document.getElementById('funkoPidTextarea');
         const fetchButton = document.getElementById('fetchButton');
         const clearResultsButton = document.getElementById('clearResultsButton');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const darkModeIcon = document.getElementById('darkModeIcon');
         const statusArea = document.getElementById('statusArea');
         const resultsArea = document.getElementById('resultsArea');
+        
+        // Sun and Moon SVG paths
+        const sunIconPath = "M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 15a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm8.364-8.364a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zm-12.728 0a1 1 0 00-1.414-1.414l-.707.707a1 1 0 101.414 1.414l.707-.707zM17 10a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zm-15 0a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1zm7.071-7.071a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zm0 12.728a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM10 7a3 3 0 100 6 3 3 0 000-6z";
+        const moonIconPath = "M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z";
+
 
         const FUNKO_TARGET_URL_BASE = 'https://funko.com/on/demandware.store/Sites-FunkoUS-Site/en_US/Wishlist-GetProduct?pid=';
         const FUNKO_IMAGE_BASE_URL = 'https://funko.com/dw/image/v2/BGTS_PRD/';
@@ -123,19 +201,18 @@
                 <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <h3 class="mt-4 text-lg font-medium text-gray-700">Ready to find some images?</h3>
+                <h3 class="mt-4 text-lg font-medium text-gray-700">Ready to find some images & details?</h3>
                 <p class="mt-1 text-sm text-gray-500">Enter Funko PIDs above and click "Fetch" to begin.</p>
             </div>`;
 
         function setInitialEmptyState() {
             resultsArea.innerHTML = emptyStateHTML;
-            // Allow CSS to handle initial opacity, then trigger transition
             setTimeout(() => {
                 const emptyStateDiv = document.getElementById('emptyStateResults');
                 if (emptyStateDiv) emptyStateDiv.style.opacity = '1';
             }, 50);
         }
-        setInitialEmptyState(); // Set on page load
+        setInitialEmptyState();
 
         clearResultsButton.addEventListener('click', () => {
             setInitialEmptyState();
@@ -144,13 +221,38 @@
             displayStatus('Results cleared. Ready for new PIDs.', 'info');
         });
 
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            if (isDarkMode) {
+                darkModeIcon.innerHTML = `<path fill-rule="evenodd" d="${sunIconPath}" clip-rule="evenodd"></path>`;
+                darkModeToggle.title = "Switch to Light Mode";
+            } else {
+                darkModeIcon.innerHTML = `<path d="${moonIconPath}"></path>`;
+                darkModeToggle.title = "Switch to Dark Mode";
+            }
+        });
+
+
+        function handleToggleDetailsClick(event) {
+            const button = event.target.closest('button');
+            const detailsContentId = button.getAttribute('aria-controls');
+            const detailsContent = document.getElementById(detailsContentId);
+            const isExpanded = detailsContent.style.display === 'block';
+
+            detailsContent.style.display = isExpanded ? 'none' : 'block';
+            button.setAttribute('aria-expanded', !isExpanded);
+            button.classList.toggle('open', !isExpanded);
+        }
+
+
         fetchButton.addEventListener('click', async () => {
             const pidsString = funkoPidTextarea.value.trim();
             const pids = pidsString.split(/[\s,]+/).map(pid => pid.trim()).filter(pid => pid !== '');
 
             if (pids.length === 0) {
                 displayStatus('Please enter at least one Funko Product ID (PID).', 'error');
-                if (!resultsArea.innerHTML.includes('pid-result-block')) { // Only reset if no results shown
+                if (!resultsArea.innerHTML.includes('pid-result-block')) {
                     setInitialEmptyState();
                 }
                 return;
@@ -169,21 +271,31 @@
                 const targetUrl = `${FUNKO_TARGET_URL_BASE}${pid}`;
                 const proxyFetchUrl = `${CORS_PROXY_BASE_URL}?key=${CORS_PROXY_API_KEY}&url=${encodeURIComponent(targetUrl)}`;
 
-                const pidResultContainerId = `pid-result-${pid.replace(/[^a-zA-Z0-9]/g, "")}-${i}`;
+                const sanitizedPid = pid.replace(/[^a-zA-Z0-9]/g, "");
+                const pidResultContainerId = `pid-result-${sanitizedPid}-${i}`;
+                const detailsToggleContainerId = `details-toggle-container-${sanitizedPid}-${i}`;
+                const detailsContentId = `details-content-${sanitizedPid}-${i}`;
+
+
                 const pidResultBlock = document.createElement('div');
                 pidResultBlock.id = pidResultContainerId;
-                pidResultBlock.className = 'pid-result-block mb-6 p-4 border border-gray-200 rounded-lg shadow'; // Animation class
-                pidResultBlock.innerHTML = `<h3 class="text-xl font-semibold text-gray-800 mb-2">Results for PID: ${pid}</h3>
-                                            <div class="pid-status-message text-sm mb-2"></div>
-                                            <div class="pid-image-gallery"></div>`;
+                pidResultBlock.className = 'pid-result-block mb-6 p-4 border border-gray-200 rounded-lg shadow';
+                pidResultBlock.innerHTML = `
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Results for PID: ${pid}</h3>
+                    <div class="pid-status-message text-sm mb-2"></div>
+                    <div class="pid-image-gallery"></div>
+                    <div id="${detailsToggleContainerId}" class="mt-3"></div>
+                    <div id="${detailsContentId}" class="details-container mt-2" style="display: none;"></div>`;
                 resultsArea.appendChild(pidResultBlock);
                 
-                // Trigger animation
                 setTimeout(() => pidResultBlock.style.opacity = '1', 50);
-
 
                 const pidStatusDiv = pidResultBlock.querySelector(`.pid-status-message`);
                 const pidImageGalleryDiv = pidResultBlock.querySelector(`.pid-image-gallery`);
+                const detailsToggleContainer = pidResultBlock.querySelector(`#${detailsToggleContainerId}`);
+                const detailsContentDiv = pidResultBlock.querySelector(`#${detailsContentId}`);
+
+
                 pidStatusDiv.innerHTML = `<p class="text-blue-600">Fetching data via proxy...</p>`;
 
                 try {
@@ -200,33 +312,62 @@
                         continue;
                     }
                     
-                    const imageUrls = extractImageUrlsFromText(responseText, pidStatusDiv); // Pass pidStatusDiv for logging
-                    if (imageUrls.size > 0) {
-                        // pidStatusDiv message is now set within extractImageUrlsFromText based on parsing method
-                        pidImageGalleryDiv.innerHTML = generateImagesHTMLForPid(imageUrls);
-                        overallSuccessCount++;
+                    const extractionResult = extractDataFromText(responseText, pidStatusDiv); 
+                    if (extractionResult.urls.size > 0) {
+                        pidImageGalleryDiv.innerHTML = generateImagesHTMLForPid(extractionResult.urls);
+                        overallSuccessCount++; // Count success if images are found
                     } else {
-                         pidStatusDiv.innerHTML = `<p class="text-yellow-600 font-medium">Data fetched successfully, but no JPG/PNG image URLs found after parsing.</p>`;
+                         // Status message is already set by extractDataFromText if no images found
                     }
+
+                    // Display Product Details if available
+                    if (extractionResult.productName || extractionResult.longDescription || extractionResult.formattedPrice) {
+                        let detailsHTML = '';
+                        if (extractionResult.productName) {
+                            detailsHTML += `<h4>Product Name:</h4><p>${extractionResult.productName}</p>`;
+                        }
+                        if (extractionResult.longDescription) {
+                            const sanitizedDescription = extractionResult.longDescription.replace(/<[^>]*>?/gm, '');
+                            detailsHTML += `<h4>Description:</h4><div class="description-text">${sanitizedDescription || 'N/A'}</div>`;
+                        }
+                        if (extractionResult.formattedPrice) {
+                            detailsHTML += `<h4>Price:</h4><p>${extractionResult.formattedPrice}</p>`;
+                        }
+                        detailsContentDiv.innerHTML = detailsHTML;
+                        detailsToggleContainer.innerHTML = `
+                            <button aria-expanded="false" aria-controls="${detailsContentId}" class="details-toggle-button w-full text-left py-2 px-3 rounded-md text-sm font-medium flex justify-between items-center">
+                                Show Product Details
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>`;
+                         if (!extractionResult.urls.size && (extractionResult.productName || extractionResult.longDescription || extractionResult.formattedPrice)) {
+                            overallSuccessCount++; // Count success if details are found even if no images
+                        }
+                    }
+
 
                 } catch (error) {
                     pidStatusDiv.innerHTML = `<p class="text-red-600 font-medium">Network error or issue with proxy for PID ${pid}: ${error.message}</p>`;
                 }
             }
 
+            document.querySelectorAll('.details-toggle-button').forEach(button => {
+                button.addEventListener('click', handleToggleDetailsClick);
+            });
+
+
             fetchButton.disabled = false;
-            fetchButton.innerHTML = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg> Fetch and Extract Images`;
+            fetchButton.innerHTML = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg> Fetch and Extract`;
             
             if (pids.length > 0) {
                 if (overallSuccessCount > 0) {
-                    displayStatus(`Batch processing complete. Successfully extracted images for ${overallSuccessCount} of ${pids.length} PIDs.`, 'success');
+                    displayStatus(`Batch processing complete. Successfully extracted images/details for ${overallSuccessCount} of ${pids.length} PIDs.`, 'success');
                 } else {
-                    displayStatus(`Batch processing complete. No images were successfully extracted for any of the ${pids.length} PIDs.`, 'warning');
+                    displayStatus(`Batch processing complete. No images or details were successfully extracted for any of the ${pids.length} PIDs.`, 'warning');
                 }
-            } else if (pidsString !== "") { // User entered something but it was all invalid PIDs
+            } else if (pidsString !== "") {
                  displayStatus('No valid PIDs found to process.', 'error');
             }
-            if (resultsArea.innerHTML.trim() === '') { // If all PIDs failed and results area is empty
+            if (resultsArea.innerHTML.trim() === '') {
                 setInitialEmptyState();
             }
         });
@@ -239,14 +380,35 @@
             statusArea.innerHTML = `<div class="status-message ${typeClass}">${message}</div>`;
         }
 
-        function extractImageUrlsFromText(text, pidStatusDiv) {
+        function extractDataFromText(text, pidStatusDiv) {
             const foundUrls = new Set();
+            let productName = null;
+            let longDescription = null;
+            let formattedPrice = null;
             const imageExtensions = /\.(png|jpg|jpeg)$/i;
-            let extractionMethod = "Regex Fallback"; // Default if JSON parsing fails or finds nothing
+            let extractionMethod = "Regex Fallback"; 
 
             try {
                 const jsonData = JSON.parse(text);
                 let jsonUrlsFound = 0;
+
+                if (jsonData.product) {
+                    if (typeof jsonData.product.productName === 'string') productName = jsonData.product.productName;
+                    else if (typeof jsonData.product.name === 'string') productName = jsonData.product.name;
+                    
+                    if (typeof jsonData.product.longDescription === 'string') longDescription = jsonData.product.longDescription;
+                    
+                    if (jsonData.product.price && jsonData.product.price.sales && typeof jsonData.product.price.sales.formatted === 'string') {
+                        formattedPrice = jsonData.product.price.sales.formatted;
+                    }
+                } else { 
+                    if (typeof jsonData.productName === 'string') productName = jsonData.productName;
+                    else if (typeof jsonData.name === 'string') productName = jsonData.name;
+                    if (typeof jsonData.longDescription === 'string') longDescription = jsonData.longDescription;
+                    if (jsonData.price && jsonData.price.sales && typeof jsonData.price.sales.formatted === 'string') {
+                         formattedPrice = jsonData.price.sales.formatted;
+                    }
+                }
 
                 function findUrlsRecursively(obj) {
                     if (!obj || typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') return;
@@ -254,25 +416,21 @@
                     if (Array.isArray(obj)) {
                         obj.forEach(item => findUrlsRecursively(item));
                     } else if (typeof obj === 'object') {
-                        // Prioritize known Funko structures
                         let processedKnownPath = false;
                         if (obj.images && typeof obj.images === 'object') {
                             const imageSources = [];
                             if (obj.images['hi-res'] && Array.isArray(obj.images['hi-res'])) imageSources.push(...obj.images['hi-res']);
                             if (obj.images.views && Array.isArray(obj.images.views)) imageSources.push(...obj.images.views);
-                            // Add other known paths like 'default', 'large', 'small', 'absomedium', 'zoom', 'swatch' etc.
                             ['default', 'large', 'small', 'absomedium', 'zoom', 'swatch'].forEach(key => {
                                 if(obj.images[key] && Array.isArray(obj.images[key])) imageSources.push(...obj.images[key]);
                             });
 
-
                             if(imageSources.length > 0) {
                                 imageSources.forEach(img => findUrlsRecursively(img));
-                                processedKnownPath = true; // Indicate we've processed a primary image path
+                                processedKnownPath = true;
                             }
                         }
                         
-                        // General check for 'url' property
                         if (typeof obj.url === 'string' && imageExtensions.test(obj.url)) {
                             let candidateUrlOrPath = obj.url;
                             let finalUrl;
@@ -291,10 +449,9 @@
                                 foundUrls.add(finalUrl);
                                 jsonUrlsFound++;
                             }
-                             processedKnownPath = true; // Also mark as processed if direct url found
+                             processedKnownPath = true;
                         }
 
-                        // If we didn't find images through a known path or direct 'url', then recurse all properties
                         if (!processedKnownPath) {
                              for (const key in obj) {
                                 if (obj.hasOwnProperty(key)) {
@@ -305,17 +462,15 @@
                     }
                 }
                 findUrlsRecursively(jsonData);
-                if (jsonUrlsFound > 0) {
+                if (jsonUrlsFound > 0 || productName || longDescription || formattedPrice) { // Success if any details or images found via JSON
                     extractionMethod = "JSON Parsing";
                 }
             } catch (e) {
-                // JSON parsing failed, will use regex fallback.
-                 if(pidStatusDiv) pidStatusDiv.innerHTML += `<p class="text-xs text-yellow-700 mt-1">Note: Response was not valid JSON, or JSON parsing for images failed. Falling back to regex scan. Error: ${e.message.substring(0,100)}</p>`;
+                 if(pidStatusDiv) pidStatusDiv.innerHTML += `<p class="text-xs text-yellow-700 mt-1">Note: Response was not valid JSON, or JSON parsing for details/images failed. Falling back to regex scan for images. Error: ${e.message.substring(0,100)}</p>`;
             }
 
-            // Fallback to Regex if JSON parsing found nothing or failed
-            if (foundUrls.size === 0) {
-                extractionMethod = "Regex Fallback"; // Ensure it's set if JSON parsing yielded nothing
+            if (foundUrls.size === 0) { 
+                extractionMethod = extractionMethod.includes("JSON") ? "JSON (no images) + Regex" : "Regex Fallback (for images)";
                 let match;
                 const imagePatternRegex = /([a-zA-Z0-9\/_.-]+\.(?:png|jpg|jpeg))/gi;
                 while ((match = imagePatternRegex.exec(text)) !== null) {
@@ -338,14 +493,19 @@
                     }
                 }
             }
-             if(pidStatusDiv && foundUrls.size > 0) {
-                pidStatusDiv.innerHTML = `<p class="text-green-600 font-medium">Data processed (using ${extractionMethod}). Extracted ${foundUrls.size} image(s).</p>`;
-            } else if (pidStatusDiv && foundUrls.size === 0) {
-                // This state might be covered by parent function, but good to have a specific message if extraction yields nothing.
-                pidStatusDiv.innerHTML = `<p class="text-yellow-600 font-medium">Data processed (using ${extractionMethod}), but no JPG/PNG image URLs found.</p>`;
-            }
+            
+            let statusText = `Data processed (using ${extractionMethod}). `;
+            if (foundUrls.size > 0) statusText += `Extracted ${foundUrls.size} image(s). `;
+            else statusText += `No JPG/PNG image URLs found. `;
+            if (productName) statusText += `Product: <strong>${productName}</strong>. `;
+            if (longDescription) statusText += `Desc available. `;
+            if (formattedPrice) statusText += `Price: <strong>${formattedPrice}</strong>.`;
 
-            return foundUrls;
+            if(pidStatusDiv) {
+                pidStatusDiv.innerHTML = `<p class="${foundUrls.size > 0 || productName || longDescription || formattedPrice ? 'text-green-600' : 'text-yellow-600'} font-medium">${statusText}</p>`;
+            }
+            
+            return { urls: foundUrls, productName, longDescription, formattedPrice };
         }
 
         function generateImagesHTMLForPid(urls) {
