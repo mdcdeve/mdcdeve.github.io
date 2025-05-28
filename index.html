@@ -83,6 +83,13 @@
         .details-toggle-button svg { transition: transform 0.3s ease; }
         .details-toggle-button.open svg { transform: rotate(180deg); }
 
+        .section-header-icon {
+            width: 2rem; /* Tailwind w-8 */
+            height: 2rem; /* Tailwind h-8 */
+            margin-right: 0.75rem; /* Tailwind mr-3 */
+            color: #4b5563; /* Tailwind gray-600 */
+        }
+
         /* Dark Mode Styles */
         body.dark-mode {
             background-color: #111827; /* Tailwind gray-900 */
@@ -93,7 +100,7 @@
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.4);
         }
         .dark-mode #mainHeader, .dark-mode #subHeader, .dark-mode .section-header { color: #f3f4f6; /* Tailwind gray-100 */ }
-        .dark-mode #mainHeaderIcon { color: #60a5fa; /* Tailwind blue-400 */ }
+        .dark-mode #mainHeaderIcon, .dark-mode .section-header-icon { color: #93c5fd; /* Lighter blue for icons in dark mode */ }
         .dark-mode label { color: #d1d5db; /* Tailwind gray-300 */ }
         .dark-mode textarea, .dark-mode input[type="text"], .dark-mode input[type="url"] {
             background-color: #374151; /* Tailwind gray-700 */
@@ -107,7 +114,7 @@
         .dark-mode .status-warning { background-color: #713f12; color: #fde68a; border-color: #f59e0b; }
         .dark-mode .pid-result-block { background-color: #374151; border-color: #4b5563; }
         .dark-mode .pid-result-block h3 { color: #f3f4f6; }
-        .dark-mode .pid-status-message p { color: #d1d5db; } /* General text in status */
+        .dark-mode .pid-status-message p { color: #d1d5db; } 
         .dark-mode .pid-status-message .text-red-600 { color: #fca5a5; } 
         .dark-mode .pid-status-message .text-green-600 { color: #6ee7b7; } 
         .dark-mode .pid-status-message .text-blue-600 { color: #93c5fd; } 
@@ -127,13 +134,15 @@
         .dark-mode #emptyStateResults p { color: #6b7280; }
         .dark-mode footer p { color: #9ca3af; }
         .dark-mode code { background-color: #4b5563; color: #93c5fd; }
-        .dark-mode .affiliate-button {
-            background-color: #4b5563; /* gray-600 */
-            color: #e5e7eb; /* gray-200 */
-        }
-        .dark-mode .affiliate-button:hover {
-            background-color: #6b7280; /* gray-500 */
-        }
+        
+        .dark-mode .affiliate-button.bg-green-500 { background-color: #059669; } /* Darker green */
+        .dark-mode .affiliate-button.bg-green-500:hover { background-color: #047857; }
+        .dark-mode .affiliate-button.bg-indigo-500 { background-color: #4f46e5; } /* Darker indigo */
+        .dark-mode .affiliate-button.bg-indigo-500:hover { background-color: #4338ca; }
+        .dark-mode .affiliate-button.bg-red-500 { background-color: #dc2626; } /* Darker red */
+        .dark-mode .affiliate-button.bg-red-500:hover { background-color: #b91c1c; }
+        .dark-mode .affiliate-button { color: #e5e7eb; } /* Ensure text color is light */
+
     </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -141,7 +150,10 @@
         <div id="mainCard" class="main-content-card bg-white p-6 md:p-8 rounded-xl shadow-2xl transition-shadow duration-300">
             
             <section class="affiliate-converter-section mb-10 pb-8 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4 section-header">Affiliate Link Converter</h2>
+                <div class="flex items-center mb-6">
+                    <svg class="section-header-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    <h2 class="text-3xl font-bold text-gray-700 section-header">Affiliate Link Converter</h2>
+                </div>
                 <div class="space-y-3">
                     <div>
                         <label for="affiliateInput" class="block text-sm font-medium text-gray-700 mb-1">Original URL:</label>
@@ -152,9 +164,9 @@
                         <input type="text" id="affiliateOutput" readonly class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-600 shadow-sm" placeholder="Converted link will appear here..." />
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-                        <button onclick="splitStringAffiliate()" class="affiliate-button bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150">Convert (Split)</button>
-                        <button onclick="noSplitAffiliate()" class="affiliate-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150">Convert (No Split)</button>
-                        <button onclick="clearElementsAffiliate()" class="affiliate-button bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 sm:col-start-2">Clear</button>
+                        <button onclick="splitStringAffiliate()" class="affiliate-button bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-full shadow-md hover:shadow-lg transition duration-150 transform hover:scale-105">Convert (Split)</button>
+                        <button onclick="noSplitAffiliate()" class="affiliate-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full shadow-md hover:shadow-lg transition duration-150 transform hover:scale-105">Convert (No Split)</button>
+                        <button onclick="clearElementsAffiliate()" class="affiliate-button bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full shadow-md hover:shadow-lg transition duration-150 transform hover:scale-105 sm:col-start-2 md:col-start-auto">Clear</button>
                     </div>
                 </div>
             </section>
@@ -216,22 +228,22 @@
                 navigator.clipboard.writeText(str)
                     .then(() => {
                         console.log('Affiliate link copied to clipboard');
-                        // Optional: Add user feedback like a toast message
                         const outputField = document.getElementById("affiliateOutput");
                         const originalPlaceholder = outputField.placeholder;
+                        outputField.value = str; // Ensure value is set before changing placeholder
                         outputField.placeholder = "Copied!";
                         setTimeout(() => { outputField.placeholder = originalPlaceholder; }, 1500);
                     })
                     .catch(err => {
                         console.error('Error copying affiliate link: ', err);
-                        try { // Fallback for older browsers / environments
+                        try { 
                            document.execCommand("copy");
                            console.log('Affiliate link copied using execCommand');
                         } catch (e) {
                            console.error('Fallback execCommand copy failed: ', e);
                         }
                     });
-            } else { // Fallback for older browsers
+            } else { 
                 try {
                    document.execCommand("copy");
                    console.log('Affiliate link copied using execCommand');
@@ -265,20 +277,18 @@
 
             let part1 = "Nope - URL not recognized or no '?' found for splitting.";
             if (input.includes("?")) {
-                const [urlOnly, queryString] = input.split("?"); // queryString is not used in this logic but good to have if needed
+                const [urlOnly, queryString] = input.split("?"); 
                 for (const storeUrl of Object.keys(stores)) {
                     if (urlOnly.includes(storeUrl)) {
                         if (storeUrl === "amazon.com") {
                             part1 = urlOnly + stores[storeUrl]; 
                         } else {
-                            part1 = stores[storeUrl] + urlOnly; // Original URL (without query string)
+                            part1 = stores[storeUrl] + encodeURIComponent(urlOnly); // Encode the original URL part
                         }
                         break;
                     }
                 }
             } else {
-                 // If no '?', try noSplit logic as a fallback for this button too, or handle as error
-                 // For now, let's keep it simple and only split if '?' is present
                  part1 = "URL does not contain '?' for splitting. Try 'No Split' button.";
             }
 
@@ -318,7 +328,7 @@
                 part1 =
                     domain === "amazon.com"
                         ? input + affiliateLinks[domain]
-                        : affiliateLinks[domain] + input;
+                        : affiliateLinks[domain] + encodeURIComponent(input); // Encode the full input URL
             } else {
                 part1 = "No matching store found for 'No Split'.";
             }
@@ -334,7 +344,6 @@
             const output = document.getElementById("affiliateOutput");
             input.value = "";
             output.value = "";
-            // Removed: document.getElementById("bitlyshort").innerHTML = ""; as element doesn't exist
         }
 
 
@@ -371,9 +380,9 @@
                 if (emptyStateDiv) emptyStateDiv.style.opacity = '1';
             }, 50);
         }
-        setInitialEmptyState(); // Set on page load for Funko extractor
+        setInitialEmptyState(); 
 
-        clearResultsButton.addEventListener('click', () => { // This is for Funko results
+        clearResultsButton.addEventListener('click', () => { 
             setInitialEmptyState();
             statusArea.innerHTML = '';
             funkoPidTextarea.value = '';
@@ -411,7 +420,7 @@
 
             if (pids.length === 0) {
                 displayStatus('Please enter at least one Funko Product ID (PID).', 'error');
-                if (!resultsArea.innerHTML.includes('pid-result-block')) { // Only reset if no results shown
+                if (!resultsArea.innerHTML.includes('pid-result-block')) { 
                     setInitialEmptyState();
                 }
                 return;
@@ -474,12 +483,10 @@
                     const extractionResult = extractDataFromText(responseText, pidStatusDiv); 
                     if (extractionResult.urls.size > 0) {
                         pidImageGalleryDiv.innerHTML = generateImagesHTMLForPid(extractionResult.urls);
-                        overallSuccessCount++; // Count success if images are found
+                        overallSuccessCount++; 
                     } else {
-                         // Status message is already set by extractDataFromText if no images found
                     }
 
-                    // Display Product Details if available
                     if (extractionResult.productName || extractionResult.longDescription || extractionResult.formattedPrice) {
                         let detailsHTML = '';
                         if (extractionResult.productName) {
@@ -499,7 +506,7 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>`;
                          if (!extractionResult.urls.size && (extractionResult.productName || extractionResult.longDescription || extractionResult.formattedPrice)) {
-                            overallSuccessCount++; // Count success if details are found even if no images
+                            overallSuccessCount++; 
                         }
                     }
 
@@ -526,7 +533,7 @@
             } else if (pidsString !== "") {
                  displayStatus('No valid PIDs found to process.', 'error');
             }
-            if (resultsArea.innerHTML.trim() === '') { // If all PIDs failed and results area is empty
+            if (resultsArea.innerHTML.trim() === '') { 
                 setInitialEmptyState();
             }
         });
