@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Image Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        canvas {
+            cursor: default;
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .active-ratio {
+            background-color: #3b82f6; /* blue-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        #gridToggle > span, #arrangeModeToggle > span, #sizeSlider {
+            transition: all 0.2s ease-in-out;
+        }
+        button:disabled, input[type="range"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-5xl mx-auto">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Advanced Image Editor</h1>
+        <p class="text-center text-gray-600 mb-6">Use 'Arrange Mode' to snap images to a grid and drag to reorder them.</p>
+
+        <!-- Controls -->
+        <div class="mb-4 p-4 bg-white rounded-lg shadow-md flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 flex-wrap">
+                <div class="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
+                    <!-- Canvas Size -->
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium text-gray-700">Canvas:</span>
+                        <button id="ratio1to1" class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 active-ratio">1:1</button>
+                        <button id="ratio4to5" class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200">4:5</button>
+                    </div>
+                    <!-- Toggles -->
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium text-gray-700">Show Grid:</span>
+                        <button id="gridToggle" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none">
+                            <span class="inline-block w-4 h-4 transform bg-white rounded-full translate-x-1"></span>
+                        </button>
+                    </div>
+                     <div class="flex items-center gap-2">
+                        <span class="font-medium text-gray-700">Arrange Mode:</span>
+                        <button id="arrangeModeToggle" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none" disabled>
+                            <span class="inline-block w-4 h-4 transform bg-white rounded-full translate-x-1"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="file-input-wrapper bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-lg shadow-md transition-all duration-300 cursor-pointer">
+                    <span>Upload Images</span>
+                    <input type="file" id="imageLoader" accept="image/png" multiple>
+                </div>
+            </div>
+            <div class="border-t border-gray-200 pt-4 mt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+                 <span class="font-medium text-gray-700">Global Size:</span>
+                 <input type="range" id="sizeSlider" min="25" max="300" value="100" class="w-full max-w-xs" disabled>
+                 <button id="resetSizeBtn" class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 bg-gray-200 hover:bg-gray-300 flex items-center gap-2" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                    Reset Sizes
+                 </button>
+                 <button id="clearAllBtn" class="px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200 bg-red-500 hover:bg-red-600 text-white flex items-center gap-2" disabled>
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <canvas id="editorCanvas"></canvas>
+        </div>
+
+        <!-- Download Button -->
+        <div class="mt-6 flex justify-center">
+             <button id="downloadBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 cursor-pointer flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Composition
+            </button>
+        </div>
+
+         <div id="message-box" class="fixed top-5 right-5 bg-blue-500 text-white py-2 px-4 rounded-lg shadow-lg text-sm hidden z-50"></div>
+    </div>
+
+    <script>
+        // --- Canvas and Context Setup ---
+        const canvas = document.getElementById('editorCanvas');
+        const ctx = canvas.getContext('2d');
+        const messageBox = document.getElementById('message-box');
+
+        // --- DOM Element References ---
+        const imageLoader = document.getElementById('imageLoader');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const ratio1to1Btn = document.getElementById('ratio1to1');
+        const ratio4to5Btn = document.getElementById('ratio4to5');
+        const gridToggle = document.getElementById('gridToggle');
+        const arrangeModeToggle = document.getElementById('arrangeModeToggle');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const resetSizeBtn = document.getElementById('resetSizeBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+
+        // --- State Management ---
+        let images = [];
+        let selectedImage = null;
+        let draggedImage = null;
+        let dragStartIndex = -1;
+        let isDragging = false;
+        let isResizing = false;
+        let startX, startY;
+        let currentAspectRatio = '1:1';
+        let isGridVisible = false;
+        let isArrangeModeOn = false;
+        const MAX_IMAGES = 16;
+        const HANDLE_SIZE = 10;
+        const PADDING = 40;
+
+        // --- Utility Functions ---
+        function showMessage(message, isError = false) {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-500', 'bg-blue-500');
+            messageBox.classList.add(isError ? 'bg-red-500' : 'bg-blue-500');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+        
+        function updateActionButtonsState() {
+            const hasImages = images.length > 0;
+            sizeSlider.disabled = !hasImages;
+            resetSizeBtn.disabled = !hasImages;
+            clearAllBtn.disabled = !hasImages;
+            arrangeModeToggle.disabled = !hasImages;
+        }
+
+        // --- Grid Calculation ---
+        function getGridConfiguration() {
+            const numImages = images.length;
+            if (numImages === 0) return null;
+            const cols = Math.ceil(Math.sqrt(numImages));
+            const rows = Math.ceil(numImages / cols);
+            const cellWidth = (canvas.width - (cols + 1) * PADDING) / cols;
+            const cellHeight = (canvas.height - (rows + 1) * PADDING) / rows;
+            return { cols, rows, cellWidth, cellHeight };
+        }
+
+        function getCellIndexFromPos(pos) {
+            const gridConfig = getGridConfiguration();
+            if (!gridConfig) return -1;
+            const { cols, cellWidth, cellHeight } = gridConfig;
+            const col = Math.floor((pos.x - PADDING / 2) / (cellWidth + PADDING));
+            const row = Math.floor((pos.y - PADDING / 2) / (cellHeight + PADDING));
+            const index = row * cols + col;
+            return (index >= 0 && index < images.length) ? index : -1;
+        }
+        
+        function snapAllImagesToGrid() {
+            const gridConfig = getGridConfiguration();
+            if (!gridConfig) return;
+            const { cols, cellWidth, cellHeight } = gridConfig;
+
+            images.forEach((img, i) => {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                const cellX = PADDING + col * (cellWidth + PADDING);
+                const cellY = PADDING + row * (cellHeight + PADDING);
+                img.x = cellX + (cellWidth - img.width) / 2;
+                img.y = cellY + (cellHeight - img.height) / 2;
+            });
+        }
+
+        // --- Canvas Sizing and Drawing ---
+        function setCanvasSize() {
+            canvas.width = 1080;
+            canvas.height = currentAspectRatio === '1:1' ? 1080 : 1350;
+            if (isArrangeModeOn) snapAllImagesToGrid();
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f9fafb';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (isGridVisible) drawGridLines();
+
+            // Draw from back to front, so images[0] is on top
+            for (let i = images.length - 1; i >= 0; i--) {
+                const img = images[i];
+                if (draggedImage && img.id === draggedImage.id) continue;
+                ctx.drawImage(img.img, img.x, img.y, img.width, img.height);
+            }
+            
+            if (draggedImage) {
+                 ctx.save();
+                 ctx.globalAlpha = 0.6;
+                 ctx.drawImage(draggedImage.img, draggedImage.x, draggedImage.y, draggedImage.width, draggedImage.height);
+                 ctx.restore();
+            }
+
+            if (selectedImage && !isArrangeModeOn) {
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.9)';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(selectedImage.x, selectedImage.y, selectedImage.width, selectedImage.height);
+                ctx.fillStyle = 'rgba(59, 130, 246, 1)';
+                ctx.fillRect(
+                    selectedImage.x + selectedImage.width - HANDLE_SIZE / 2,
+                    selectedImage.y + selectedImage.height - HANDLE_SIZE / 2,
+                    HANDLE_SIZE,
+                    HANDLE_SIZE
+                );
+            }
+            updateActionButtonsState();
+        }
+
+        function drawGridLines() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(156, 163, 175, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            const w = canvas.width;
+            const h = canvas.height;
+            const lines = [0.25, 0.5, 0.75];
+            lines.forEach(line => {
+                ctx.beginPath();
+                ctx.moveTo(w * line, 0);
+                ctx.lineTo(w * line, h);
+                ctx.stroke();
+            });
+            lines.forEach(line => {
+                ctx.beginPath();
+                ctx.moveTo(0, h * line);
+                ctx.lineTo(w, h * line);
+                ctx.stroke();
+            });
+            ctx.restore();
+        }
+        
+        // --- Image Loading ---
+        function handleImageUpload(e) {
+            const files = e.target.files;
+            if (!files.length) return;
+
+            if (images.length + files.length > MAX_IMAGES) {
+                showMessage(`You can only upload a total of ${MAX_IMAGES} images.`, true);
+                return;
+            }
+
+            Array.from(files).forEach((file, index) => {
+                if (file.type !== 'image/png') {
+                    showMessage(`File '${file.name}' is not a PNG and was skipped.`, true);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const aspectRatio = img.naturalWidth / img.naturalHeight;
+                        const initialWidth = canvas.width / 4;
+                        
+                        const newImage = {
+                            id: Date.now() + index,
+                            img: img,
+                            x: 50 + (images.length * 40 % 200),
+                            y: 50 + (images.length * 40 % 200),
+                            width: initialWidth,
+                            height: initialWidth / aspectRatio,
+                            aspectRatio: aspectRatio,
+                            baseWidth: initialWidth,
+                            originalBaseWidth: initialWidth,
+                        };
+                        
+                        images.push(newImage);
+                        if (isArrangeModeOn) snapAllImagesToGrid();
+                        draw();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            e.target.value = '';
+        }
+
+        // --- Mouse and Keyboard Event Handlers ---
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+                y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function isOverImage(pos, img) {
+            return (pos.x >= img.x && pos.x <= img.x + img.width && pos.y >= img.y && pos.y <= img.y + img.height);
+        }
+
+        function isOverHandle(pos, img) {
+            const handleX = img.x + img.width - HANDLE_SIZE;
+            const handleY = img.y + img.height - HANDLE_SIZE;
+            return (pos.x >= handleX && pos.x <= handleX + HANDLE_SIZE * 2 && pos.y >= handleY && pos.y <= handleY + HANDLE_SIZE * 2);
+        }
+
+        canvas.addEventListener('mousedown', function(e) {
+            const pos = getMousePos(canvas, e);
+            startX = pos.x;
+            startY = pos.y;
+            
+            // Prioritize resize handle in free-form mode
+            if (!isArrangeModeOn && selectedImage && isOverHandle(pos, selectedImage)) {
+                isResizing = true;
+                isDragging = false;
+                draw();
+                return;
+            }
+
+            let clickedImage = null;
+            let clickedImageIndex = -1;
+
+            // Find top-most image under cursor. Iterate front-to-back because images[0] is on top.
+            for (let i = 0; i < images.length; i++) {
+                if (isOverImage(pos, images[i])) {
+                    clickedImage = images[i];
+                    clickedImageIndex = i;
+                    break;
+                }
+            }
+            
+            if (!clickedImage) {
+                selectedImage = null;
+                draw();
+                return;
+            }
+
+            if (isArrangeModeOn) {
+                isDragging = true;
+                draggedImage = clickedImage;
+                dragStartIndex = clickedImageIndex;
+            } else {
+                selectedImage = clickedImage;
+                isDragging = true;
+                // Bring the clicked image to the front of the stack
+                if (clickedImageIndex > 0) {
+                    const [item] = images.splice(clickedImageIndex, 1);
+                    images.unshift(item);
+                }
+            }
+            draw();
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (!isDragging && !isResizing) return;
+            const pos = getMousePos(canvas, e);
+            const dx = pos.x - startX;
+            const dy = pos.y - startY;
+
+            if (isArrangeModeOn && draggedImage) {
+                draggedImage.x += dx;
+                draggedImage.y += dy;
+            } else if (!isArrangeModeOn && selectedImage) {
+                if (isResizing) {
+                    const newWidth = selectedImage.width + dx;
+                    if (newWidth > 20) {
+                        const oldWidth = selectedImage.width;
+                        const oldHeight = selectedImage.height;
+                        const newHeight = newWidth / selectedImage.aspectRatio;
+                        selectedImage.x -= (newWidth - oldWidth) / 2;
+                        selectedImage.y -= (newHeight - oldHeight) / 2;
+                        selectedImage.width = newWidth;
+                        selectedImage.height = newHeight;
+                        selectedImage.baseWidth = newWidth;
+                        sizeSlider.value = 100;
+                    }
+                } else if (isDragging) {
+                    selectedImage.x += dx;
+                    selectedImage.y += dy;
+                }
+            }
+            
+            startX = pos.x;
+            startY = pos.y;
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', function(e) {
+            if (isArrangeModeOn && draggedImage) {
+                const pos = getMousePos(canvas, e);
+                const dropIndex = getCellIndexFromPos(pos);
+                
+                if (dropIndex > -1 && dragStartIndex > -1 && dragStartIndex !== dropIndex) {
+                    const temp = images[dragStartIndex];
+                    images[dragStartIndex] = images[dropIndex];
+                    images[dropIndex] = temp;
+                }
+                snapAllImagesToGrid();
+            }
+            
+            isDragging = false;
+            isResizing = false;
+            draggedImage = null;
+            dragStartIndex = -1;
+            draw();
+        });
+
+        function handleKeyDown(e) {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedImage && !isArrangeModeOn) {
+                    e.preventDefault();
+                    images = images.filter(img => img.id !== selectedImage.id);
+                    selectedImage = null;
+                    draw();
+                }
+            }
+        }
+
+        // --- Control Button Handlers ---
+        function toggleArrangeMode() {
+            isArrangeModeOn = !isArrangeModeOn;
+            selectedImage = null;
+            const innerCircle = arrangeModeToggle.querySelector('span');
+            arrangeModeToggle.classList.toggle('bg-blue-600', isArrangeModeOn);
+            arrangeModeToggle.classList.toggle('bg-gray-200', !isArrangeModeOn);
+            innerCircle.style.transform = isArrangeModeOn ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
+            if (isArrangeModeOn) {
+                snapAllImagesToGrid();
+            }
+            draw();
+        }
+
+        function handleGlobalSizeChange(e) {
+            const scale = e.target.value / 100;
+            images.forEach(img => {
+                const oldWidth = img.width;
+                const oldHeight = img.height;
+                const newWidth = img.baseWidth * scale;
+                const newHeight = newWidth / img.aspectRatio;
+
+                if (!isArrangeModeOn) {
+                    img.x -= (newWidth - oldWidth) / 2;
+                    img.y -= (newHeight - oldHeight) / 2;
+                }
+                
+                img.width = newWidth;
+                img.height = newHeight;
+            });
+
+            if (isArrangeModeOn) {
+                snapAllImagesToGrid();
+            }
+            
+            draw();
+        }
+
+        function resetAllSizes() {
+            images.forEach(img => {
+                const oldWidth = img.width;
+                const oldHeight = img.height;
+                const newWidth = img.originalBaseWidth;
+                const newHeight = newWidth / img.aspectRatio;
+                
+                if (!isArrangeModeOn) {
+                    img.x -= (newWidth - oldWidth) / 2;
+                    img.y -= (newHeight - oldHeight) / 2;
+                }
+
+                img.width = newWidth;
+                img.height = newHeight;
+                img.baseWidth = newWidth;
+            });
+            sizeSlider.value = 100;
+            if (isArrangeModeOn) snapAllImagesToGrid();
+            draw();
+        }
+
+        function clearAllImages() {
+            images = [];
+            selectedImage = null;
+            draggedImage = null;
+            if (isArrangeModeOn) {
+                isArrangeModeOn = false;
+                const innerCircle = arrangeModeToggle.querySelector('span');
+                arrangeModeToggle.classList.remove('bg-blue-600');
+                arrangeModeToggle.classList.add('bg-gray-200');
+                innerCircle.style.transform = 'translateX(0.25rem)';
+            }
+            draw();
+        }
+        
+        // --- Initialization ---
+        imageLoader.addEventListener('change', handleImageUpload);
+        downloadBtn.addEventListener('click', () => { selectedImage = null; draggedImage = null; draw(); const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href = url; a.download = 'composition.png'; a.click(); });
+        ratio1to1Btn.addEventListener('click', () => { currentAspectRatio = '1:1'; ratio1to1Btn.classList.add('active-ratio'); ratio4to5Btn.classList.remove('active-ratio'); setCanvasSize(); });
+        ratio4to5Btn.addEventListener('click', () => { currentAspectRatio = '4:5'; ratio4to5Btn.classList.add('active-ratio'); ratio1to1Btn.classList.remove('active-ratio'); setCanvasSize(); });
+        gridToggle.addEventListener('click', () => { isGridVisible = !isGridVisible; const c = gridToggle.querySelector('span'); gridToggle.classList.toggle('bg-blue-600', isGridVisible); c.style.transform = isGridVisible ? 'translateX(1.25rem)' : 'translateX(0.25rem)'; draw(); });
+        arrangeModeToggle.addEventListener('click', toggleArrangeMode);
+        sizeSlider.addEventListener('input', handleGlobalSizeChange);
+        resetSizeBtn.addEventListener('click', resetAllSizes);
+        clearAllBtn.addEventListener('click', clearAllImages);
+        window.addEventListener('keydown', handleKeyDown);
+        
+        setCanvasSize();
+    </script>
+
+</body>
+</html>
