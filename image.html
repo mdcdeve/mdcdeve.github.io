@@ -37,9 +37,25 @@
         #gridToggle > span, #arrangeModeToggle > span, #sizeSlider {
             transition: all 0.2s ease-in-out;
         }
-        button:disabled, input[type="range"]:disabled {
+        button:disabled, input:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .color-swatch.active {
+            border-color: #3b82f6;
+        }
+        .transparent-swatch {
+            background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 12px 12px;
+            background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
         }
     </style>
 </head>
@@ -47,19 +63,18 @@
 
     <div class="w-full max-w-5xl mx-auto">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Advanced Image Editor</h1>
-        <p class="text-center text-gray-600 mb-6">Use 'Arrange Mode' to snap images to a grid and drag to reorder them.</p>
+        <p class="text-center text-gray-600 mb-6">Add images and text, then use Arrange Mode to snap them into a grid.</p>
 
         <!-- Controls -->
         <div class="mb-4 p-4 bg-white rounded-lg shadow-md flex flex-col gap-4">
+            <!-- Top Row Controls -->
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 flex-wrap">
                 <div class="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
-                    <!-- Canvas Size -->
                     <div class="flex items-center gap-2">
                         <span class="font-medium text-gray-700">Canvas:</span>
                         <button id="ratio1to1" class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 active-ratio">1:1</button>
                         <button id="ratio4to5" class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200">4:5</button>
                     </div>
-                    <!-- Toggles -->
                     <div class="flex items-center gap-2">
                         <span class="font-medium text-gray-700">Show Grid:</span>
                         <button id="gridToggle" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none">
@@ -78,6 +93,7 @@
                     <input type="file" id="imageLoader" accept="image/png" multiple>
                 </div>
             </div>
+            <!-- Middle Row Controls -->
             <div class="border-t border-gray-200 pt-4 mt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
                  <span class="font-medium text-gray-700">Global Size:</span>
                  <input type="range" id="sizeSlider" min="25" max="300" value="100" class="w-full max-w-xs" disabled>
@@ -85,24 +101,57 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                     Reset Sizes
                  </button>
-                 <button id="clearAllBtn" class="px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200 bg-red-500 hover:bg-red-600 text-white flex items-center gap-2" disabled>
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    Clear All
-                </button>
+                 <button id="addTextBtn" class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                    Add Text
+                 </button>
+            </div>
+            <!-- Bottom Row Controls -->
+            <div class="border-t border-gray-200 pt-4 mt-2 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-4 flex-wrap">
+                    <span class="font-medium text-gray-700">Background:</span>
+                    <div id="bgColorSwatches" class="flex items-center gap-2">
+                        <button class="color-swatch active" style="background-color: white;" data-color="white"></button>
+                        <button class="color-swatch" style="background-color: #e5e7eb;" data-color="#e5e7eb"></button>
+                        <button class="color-swatch" style="background-color: #1f2937;" data-color="#1f2937"></button>
+                        <button class="color-swatch transparent-swatch" data-color="transparent"></button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="bgPrompt" placeholder="Describe a background..." class="border rounded-md px-2 py-1 text-sm">
+                        <button id="generateBgBtn" class="px-3 py-1 rounded-md text-sm font-semibold bg-green-500 hover:bg-green-600 text-white">Generate</button>
+                    </div>
+                </div>
+                 <div class="flex items-center gap-2">
+                     <button id="clearAllBtn" class="px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200 bg-red-100 text-red-700 hover:bg-red-200 flex items-center gap-2" disabled>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Clear All
+                    </button>
+                     <button id="downloadBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 cursor-pointer flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download
+                    </button>
+                 </div>
             </div>
         </div>
 
         <!-- Canvas Container -->
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden relative">
             <canvas id="editorCanvas"></canvas>
+            <div id="loadingOverlay" class="absolute inset-0 bg-black bg-opacity-50 text-white text-lg flex items-center justify-center hidden">
+                Generating Background...
+            </div>
         </div>
-
-        <!-- Download Button -->
-        <div class="mt-6 flex justify-center">
-             <button id="downloadBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 cursor-pointer flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download Composition
-            </button>
+        
+        <!-- Text Input Modal -->
+        <div id="textModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl">
+                <h3 class="text-lg font-medium mb-4">Add Text</h3>
+                <input type="text" id="textInput" class="border rounded-md w-full px-3 py-2" placeholder="Enter your text...">
+                <div class="mt-4 flex justify-end gap-2">
+                    <button id="cancelTextBtn" class="px-4 py-2 rounded-md text-sm bg-gray-200 hover:bg-gray-300">Cancel</button>
+                    <button id="confirmTextBtn" class="px-4 py-2 rounded-md text-sm bg-blue-500 hover:bg-blue-600 text-white">Add</button>
+                </div>
+            </div>
         </div>
 
          <div id="message-box" class="fixed top-5 right-5 bg-blue-500 text-white py-2 px-4 rounded-lg shadow-lg text-sm hidden z-50"></div>
@@ -124,11 +173,20 @@
         const sizeSlider = document.getElementById('sizeSlider');
         const resetSizeBtn = document.getElementById('resetSizeBtn');
         const clearAllBtn = document.getElementById('clearAllBtn');
+        const addTextBtn = document.getElementById('addTextBtn');
+        const textModal = document.getElementById('textModal');
+        const textInput = document.getElementById('textInput');
+        const confirmTextBtn = document.getElementById('confirmTextBtn');
+        const cancelTextBtn = document.getElementById('cancelTextBtn');
+        const bgColorSwatches = document.getElementById('bgColorSwatches');
+        const bgPrompt = document.getElementById('bgPrompt');
+        const generateBgBtn = document.getElementById('generateBgBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
         // --- State Management ---
-        let images = [];
-        let selectedImage = null;
-        let draggedImage = null;
+        let sceneObjects = [];
+        let selectedObject = null;
+        let draggedObject = null;
         let dragStartIndex = -1;
         let isDragging = false;
         let isResizing = false;
@@ -136,6 +194,8 @@
         let currentAspectRatio = '1:1';
         let isGridVisible = false;
         let isArrangeModeOn = false;
+        let backgroundColor = '#ffffff';
+        let backgroundImage = null;
         const MAX_IMAGES = 16;
         const HANDLE_SIZE = 10;
         const PADDING = 40;
@@ -151,16 +211,17 @@
         }
         
         function updateActionButtonsState() {
-            const hasImages = images.length > 0;
-            sizeSlider.disabled = !hasImages;
-            resetSizeBtn.disabled = !hasImages;
-            clearAllBtn.disabled = !hasImages;
-            arrangeModeToggle.disabled = !hasImages;
+            const hasObjects = sceneObjects.length > 0;
+            sizeSlider.disabled = !hasObjects;
+            resetSizeBtn.disabled = !hasObjects;
+            clearAllBtn.disabled = !hasObjects;
+            arrangeModeToggle.disabled = !hasObjects;
         }
 
         // --- Grid Calculation ---
         function getGridConfiguration() {
-            const numImages = images.length;
+            const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
+            const numImages = imageObjects.length;
             if (numImages === 0) return null;
             const cols = Math.ceil(Math.sqrt(numImages));
             const rows = Math.ceil(numImages / cols);
@@ -172,19 +233,21 @@
         function getCellIndexFromPos(pos) {
             const gridConfig = getGridConfiguration();
             if (!gridConfig) return -1;
+            const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
             const { cols, cellWidth, cellHeight } = gridConfig;
             const col = Math.floor((pos.x - PADDING / 2) / (cellWidth + PADDING));
             const row = Math.floor((pos.y - PADDING / 2) / (cellHeight + PADDING));
             const index = row * cols + col;
-            return (index >= 0 && index < images.length) ? index : -1;
+            return (index >= 0 && index < imageObjects.length) ? index : -1;
         }
         
         function snapAllImagesToGrid() {
             const gridConfig = getGridConfiguration();
             if (!gridConfig) return;
             const { cols, cellWidth, cellHeight } = gridConfig;
+            const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
 
-            images.forEach((img, i) => {
+            imageObjects.forEach((img, i) => {
                 const row = Math.floor(i / cols);
                 const col = i % cols;
                 const cellX = PADDING + col * (cellWidth + PADDING);
@@ -202,39 +265,63 @@
             draw();
         }
 
-        function draw() {
+        function draw(forDownload = false) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#f9fafb';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            if (isGridVisible) drawGridLines();
+            
+            if (backgroundColor !== 'transparent') {
+                ctx.fillStyle = backgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
 
-            // Draw from back to front, so images[0] is on top
-            for (let i = images.length - 1; i >= 0; i--) {
-                const img = images[i];
-                if (draggedImage && img.id === draggedImage.id) continue;
-                ctx.drawImage(img.img, img.x, img.y, img.width, img.height);
+            if (backgroundImage) {
+                ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+            }
+
+            if (isGridVisible && !forDownload) drawGridLines();
+
+            for (let i = sceneObjects.length - 1; i >= 0; i--) {
+                const obj = sceneObjects[i];
+                if (draggedObject && obj.id === draggedObject.id) continue;
+                drawObject(obj);
             }
             
-            if (draggedImage) {
+            if (draggedObject) {
                  ctx.save();
                  ctx.globalAlpha = 0.6;
-                 ctx.drawImage(draggedImage.img, draggedImage.x, draggedImage.y, draggedImage.width, draggedImage.height);
+                 drawObject(draggedObject);
                  ctx.restore();
             }
 
-            if (selectedImage && !isArrangeModeOn) {
-                ctx.strokeStyle = 'rgba(59, 130, 246, 0.9)';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(selectedImage.x, selectedImage.y, selectedImage.width, selectedImage.height);
+            if (selectedObject && !isArrangeModeOn && !forDownload) {
+                drawSelection(selectedObject);
+            }
+            updateActionButtonsState();
+        }
+
+        function drawObject(obj) {
+            if (obj.type === 'image') {
+                ctx.drawImage(obj.img, obj.x, obj.y, obj.width, obj.height);
+            } else if (obj.type === 'text') {
+                ctx.font = `${obj.size}px ${obj.font}`;
+                ctx.fillStyle = obj.color;
+                ctx.textBaseline = 'top';
+                ctx.fillText(obj.text, obj.x, obj.y);
+            }
+        }
+
+        function drawSelection(obj) {
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.9)';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+            if (obj.type === 'image') {
                 ctx.fillStyle = 'rgba(59, 130, 246, 1)';
                 ctx.fillRect(
-                    selectedImage.x + selectedImage.width - HANDLE_SIZE / 2,
-                    selectedImage.y + selectedImage.height - HANDLE_SIZE / 2,
+                    obj.x + obj.width - HANDLE_SIZE / 2,
+                    obj.y + obj.height - HANDLE_SIZE / 2,
                     HANDLE_SIZE,
                     HANDLE_SIZE
                 );
             }
-            updateActionButtonsState();
         }
 
         function drawGridLines() {
@@ -260,42 +347,40 @@
             ctx.restore();
         }
         
-        // --- Image Loading ---
+        // --- Image & Text Loading ---
         function handleImageUpload(e) {
             const files = e.target.files;
             if (!files.length) return;
 
-            if (images.length + files.length > MAX_IMAGES) {
+            if (sceneObjects.filter(o=>o.type==='image').length + files.length > MAX_IMAGES) {
                 showMessage(`You can only upload a total of ${MAX_IMAGES} images.`, true);
                 return;
             }
 
-            Array.from(files).forEach((file, index) => {
+            Array.from(files).forEach((file) => {
                 if (file.type !== 'image/png') {
                     showMessage(`File '${file.name}' is not a PNG and was skipped.`, true);
                     return;
                 }
-
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
                         const aspectRatio = img.naturalWidth / img.naturalHeight;
                         const initialWidth = canvas.width / 4;
-                        
                         const newImage = {
-                            id: Date.now() + index,
+                            type: 'image',
+                            id: Date.now() + Math.random(),
                             img: img,
-                            x: 50 + (images.length * 40 % 200),
-                            y: 50 + (images.length * 40 % 200),
+                            x: 50 + (sceneObjects.length * 40 % 200),
+                            y: 50,
                             width: initialWidth,
                             height: initialWidth / aspectRatio,
                             aspectRatio: aspectRatio,
                             baseWidth: initialWidth,
                             originalBaseWidth: initialWidth,
                         };
-                        
-                        images.push(newImage);
+                        sceneObjects.unshift(newImage);
                         if (isArrangeModeOn) snapAllImagesToGrid();
                         draw();
                     };
@@ -303,7 +388,6 @@
                 };
                 reader.readAsDataURL(file);
             });
-            
             e.target.value = '';
         }
 
@@ -316,13 +400,14 @@
             };
         }
 
-        function isOverImage(pos, img) {
-            return (pos.x >= img.x && pos.x <= img.x + img.width && pos.y >= img.y && pos.y <= img.y + img.height);
+        function isOverObject(pos, obj) {
+            return (pos.x >= obj.x && pos.x <= obj.x + obj.width && pos.y >= obj.y && pos.y <= obj.y + obj.height);
         }
 
-        function isOverHandle(pos, img) {
-            const handleX = img.x + img.width - HANDLE_SIZE;
-            const handleY = img.y + img.height - HANDLE_SIZE;
+        function isOverHandle(pos, obj) {
+            if (obj.type !== 'image') return false;
+            const handleX = obj.x + obj.width - HANDLE_SIZE;
+            const handleY = obj.y + obj.height - HANDLE_SIZE;
             return (pos.x >= handleX && pos.x <= handleX + HANDLE_SIZE * 2 && pos.y >= handleY && pos.y <= handleY + HANDLE_SIZE * 2);
         }
 
@@ -331,43 +416,42 @@
             startX = pos.x;
             startY = pos.y;
             
-            // Prioritize resize handle in free-form mode
-            if (!isArrangeModeOn && selectedImage && isOverHandle(pos, selectedImage)) {
+            if (!isArrangeModeOn && selectedObject && isOverHandle(pos, selectedObject)) {
                 isResizing = true;
                 isDragging = false;
                 draw();
                 return;
             }
 
-            let clickedImage = null;
-            let clickedImageIndex = -1;
+            let clickedObject = null;
+            let clickedObjectIndex = -1;
 
-            // Find top-most image under cursor. Iterate front-to-back because images[0] is on top.
-            for (let i = 0; i < images.length; i++) {
-                if (isOverImage(pos, images[i])) {
-                    clickedImage = images[i];
-                    clickedImageIndex = i;
+            for (let i = 0; i < sceneObjects.length; i++) {
+                if (isOverObject(pos, sceneObjects[i])) {
+                    clickedObject = sceneObjects[i];
+                    clickedObjectIndex = i;
                     break;
                 }
             }
             
-            if (!clickedImage) {
-                selectedImage = null;
+            if (!clickedObject) {
+                selectedObject = null;
                 draw();
                 return;
             }
 
             if (isArrangeModeOn) {
-                isDragging = true;
-                draggedImage = clickedImage;
-                dragStartIndex = clickedImageIndex;
+                if (clickedObject.type === 'image') {
+                    isDragging = true;
+                    draggedObject = clickedObject;
+                    dragStartIndex = sceneObjects.filter(o => o.type === 'image').findIndex(o => o.id === clickedObject.id);
+                }
             } else {
-                selectedImage = clickedImage;
+                selectedObject = clickedObject;
                 isDragging = true;
-                // Bring the clicked image to the front of the stack
-                if (clickedImageIndex > 0) {
-                    const [item] = images.splice(clickedImageIndex, 1);
-                    images.unshift(item);
+                if (clickedObjectIndex > 0) {
+                    const [item] = sceneObjects.splice(clickedObjectIndex, 1);
+                    sceneObjects.unshift(item);
                 }
             }
             draw();
@@ -379,26 +463,28 @@
             const dx = pos.x - startX;
             const dy = pos.y - startY;
 
-            if (isArrangeModeOn && draggedImage) {
-                draggedImage.x += dx;
-                draggedImage.y += dy;
-            } else if (!isArrangeModeOn && selectedImage) {
+            if (isArrangeModeOn && draggedObject) {
+                draggedObject.x += dx;
+                draggedObject.y += dy;
+            } else if (!isArrangeModeOn && selectedObject) {
                 if (isResizing) {
-                    const newWidth = selectedImage.width + dx;
-                    if (newWidth > 20) {
-                        const oldWidth = selectedImage.width;
-                        const oldHeight = selectedImage.height;
-                        const newHeight = newWidth / selectedImage.aspectRatio;
-                        selectedImage.x -= (newWidth - oldWidth) / 2;
-                        selectedImage.y -= (newHeight - oldHeight) / 2;
-                        selectedImage.width = newWidth;
-                        selectedImage.height = newHeight;
-                        selectedImage.baseWidth = newWidth;
-                        sizeSlider.value = 100;
+                    if (selectedObject.type === 'image') {
+                        const newWidth = selectedObject.width + dx;
+                        if (newWidth > 20) {
+                            const oldWidth = selectedObject.width;
+                            const oldHeight = selectedObject.height;
+                            const newHeight = newWidth / selectedObject.aspectRatio;
+                            selectedObject.x -= (newWidth - oldWidth) / 2;
+                            selectedObject.y -= (newHeight - oldHeight) / 2;
+                            selectedObject.width = newWidth;
+                            selectedObject.height = newHeight;
+                            selectedObject.baseWidth = newWidth;
+                            sizeSlider.value = 100;
+                        }
                     }
                 } else if (isDragging) {
-                    selectedImage.x += dx;
-                    selectedImage.y += dy;
+                    selectedObject.x += dx;
+                    selectedObject.y += dy;
                 }
             }
             
@@ -408,31 +494,36 @@
         });
 
         canvas.addEventListener('mouseup', function(e) {
-            if (isArrangeModeOn && draggedImage) {
+            if (isArrangeModeOn && draggedObject) {
                 const pos = getMousePos(canvas, e);
+                const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
                 const dropIndex = getCellIndexFromPos(pos);
                 
                 if (dropIndex > -1 && dragStartIndex > -1 && dragStartIndex !== dropIndex) {
-                    const temp = images[dragStartIndex];
-                    images[dragStartIndex] = images[dropIndex];
-                    images[dropIndex] = temp;
+                    const draggedId = draggedObject.id;
+                    const originalIndexA = sceneObjects.findIndex(o => o.id === draggedId);
+                    const targetId = imageObjects[dropIndex].id;
+                    const originalIndexB = sceneObjects.findIndex(o => o.id === targetId);
+
+                    [sceneObjects[originalIndexA], sceneObjects[originalIndexB]] = [sceneObjects[originalIndexB], sceneObjects[originalIndexA]];
                 }
                 snapAllImagesToGrid();
             }
             
             isDragging = false;
             isResizing = false;
-            draggedImage = null;
+            draggedObject = null;
             dragStartIndex = -1;
             draw();
         });
 
         function handleKeyDown(e) {
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedImage && !isArrangeModeOn) {
+                if (selectedObject && !isArrangeModeOn) {
                     e.preventDefault();
-                    images = images.filter(img => img.id !== selectedImage.id);
-                    selectedImage = null;
+                    sceneObjects = sceneObjects.filter(obj => obj.id !== selectedObject.id);
+                    selectedObject = null;
+                    if (isArrangeModeOn) snapAllImagesToGrid();
                     draw();
                 }
             }
@@ -441,7 +532,7 @@
         // --- Control Button Handlers ---
         function toggleArrangeMode() {
             isArrangeModeOn = !isArrangeModeOn;
-            selectedImage = null;
+            selectedObject = null;
             const innerCircle = arrangeModeToggle.querySelector('span');
             arrangeModeToggle.classList.toggle('bg-blue-600', isArrangeModeOn);
             arrangeModeToggle.classList.toggle('bg-gray-200', !isArrangeModeOn);
@@ -454,7 +545,7 @@
 
         function handleGlobalSizeChange(e) {
             const scale = e.target.value / 100;
-            images.forEach(img => {
+            sceneObjects.filter(o => o.type === 'image').forEach(img => {
                 const oldWidth = img.width;
                 const oldHeight = img.height;
                 const newWidth = img.baseWidth * scale;
@@ -477,7 +568,7 @@
         }
 
         function resetAllSizes() {
-            images.forEach(img => {
+            sceneObjects.filter(o => o.type === 'image').forEach(img => {
                 const oldWidth = img.width;
                 const oldHeight = img.height;
                 const newWidth = img.originalBaseWidth;
@@ -497,30 +588,123 @@
             draw();
         }
 
-        function clearAllImages() {
-            images = [];
-            selectedImage = null;
-            draggedImage = null;
+        function clearAll() {
+            sceneObjects = [];
+            selectedObject = null;
+            draggedObject = null;
+            backgroundImage = null;
+            backgroundColor = '#ffffff';
             if (isArrangeModeOn) {
-                isArrangeModeOn = false;
-                const innerCircle = arrangeModeToggle.querySelector('span');
-                arrangeModeToggle.classList.remove('bg-blue-600');
-                arrangeModeToggle.classList.add('bg-gray-200');
-                innerCircle.style.transform = 'translateX(0.25rem)';
+                toggleArrangeMode();
             }
             draw();
+        }
+
+        function addText() {
+            textModal.classList.remove('hidden');
+            textInput.focus();
+        }
+
+        confirmTextBtn.addEventListener('click', () => {
+            const text = textInput.value;
+            if (!text) return;
+            
+            ctx.font = '50px Inter';
+            const textMetrics = ctx.measureText(text);
+
+            const newText = {
+                type: 'text',
+                id: Date.now() + Math.random(),
+                text: text,
+                x: 50,
+                y: 50,
+                font: 'Inter',
+                size: 50,
+                color: '#000000',
+                width: textMetrics.width,
+                height: 50, // Approximate height
+            };
+            sceneObjects.unshift(newText);
+            selectedObject = newText;
+            textInput.value = '';
+            textModal.classList.add('hidden');
+            draw();
+        });
+
+        cancelTextBtn.addEventListener('click', () => {
+            textInput.value = '';
+            textModal.classList.add('hidden');
+        });
+
+        bgColorSwatches.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                backgroundColor = e.target.dataset.color;
+                backgroundImage = null;
+                document.querySelectorAll('#bgColorSwatches button').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                draw();
+            }
+        });
+
+        async function generateBackground() {
+            const prompt = bgPrompt.value;
+            if (!prompt) {
+                showMessage('Please enter a description for the background.', true);
+                return;
+            }
+            loadingOverlay.classList.remove('hidden');
+            generateBgBtn.disabled = true;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                
+                const result = await response.json();
+
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    const img = new Image();
+                    img.onload = () => {
+                        backgroundImage = img;
+                        backgroundColor = 'transparent';
+                        draw();
+                    };
+                    img.src = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                } else {
+                    throw new Error('No image data received from API.');
+                }
+            } catch (error) {
+                console.error("AI Background Generation Error:", error);
+                showMessage('Failed to generate background. Please try again.', true);
+            } finally {
+                loadingOverlay.classList.add('hidden');
+                generateBgBtn.disabled = false;
+            }
         }
         
         // --- Initialization ---
         imageLoader.addEventListener('change', handleImageUpload);
-        downloadBtn.addEventListener('click', () => { selectedImage = null; draggedImage = null; draw(); const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href = url; a.download = 'composition.png'; a.click(); });
+        downloadBtn.addEventListener('click', () => { selectedObject = null; draggedObject = null; draw(true); const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href = url; a.download = 'composition.png'; a.click(); draw(); });
         ratio1to1Btn.addEventListener('click', () => { currentAspectRatio = '1:1'; ratio1to1Btn.classList.add('active-ratio'); ratio4to5Btn.classList.remove('active-ratio'); setCanvasSize(); });
         ratio4to5Btn.addEventListener('click', () => { currentAspectRatio = '4:5'; ratio4to5Btn.classList.add('active-ratio'); ratio1to1Btn.classList.remove('active-ratio'); setCanvasSize(); });
-        gridToggle.addEventListener('click', () => { isGridVisible = !isGridVisible; const c = gridToggle.querySelector('span'); gridToggle.classList.toggle('bg-blue-600', isGridVisible); c.style.transform = isGridVisible ? 'translateX(1.25rem)' : 'translateX(0.25rem)'; draw(); });
+        gridToggle.addEventListener('click', () => { isGridVisible = !isGridVisible; const c = gridToggle.querySelector('span'); gridToggle.classList.toggle('bg-blue-600', isGridVisible); gridToggle.classList.toggle('bg-gray-200', !isGridVisible); c.style.transform = isGridVisible ? 'translateX(1.25rem)' : 'translateX(0.25rem)'; draw(); });
         arrangeModeToggle.addEventListener('click', toggleArrangeMode);
         sizeSlider.addEventListener('input', handleGlobalSizeChange);
         resetSizeBtn.addEventListener('click', resetAllSizes);
-        clearAllBtn.addEventListener('click', clearAllImages);
+        clearAllBtn.addEventListener('click', clearAll);
+        addTextBtn.addEventListener('click', addText);
+        generateBgBtn.addEventListener('click', generateBackground);
+        bgPrompt.addEventListener('focus', () => { selectedObject = null; draw(); });
         window.addEventListener('keydown', handleKeyDown);
         
         setCanvasSize();
