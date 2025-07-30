@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funko.com Bulk Image Exporter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- JSZip library for creating zip files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .found-item { animation: fadeIn 0.5s ease-out forwards; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">Funko.com Bulk Image Exporter</h1>
+            <p class="text-lg text-gray-400">Extract and download all images for a list of Funko PIDs.</p>
+        </header>
+
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+            <div>
+                <label for="pidInput" class="block text-sm font-medium text-gray-400 mb-1">Product List with PIDs</label>
+                <textarea id="pidInput" class="w-full h-64 bg-gray-900 border border-gray-700 rounded-md py-2 px-4 text-gray-300 font-mono text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Paste your product list here. The script will automatically find 5-digit PIDs."></textarea>
+            </div>
+
+            <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <button id="startBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 w-full sm:w-auto disabled:bg-gray-500 disabled:cursor-not-allowed">Fetch Images</button>
+                <button id="downloadBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500/50 w-full sm:w-auto hidden">Download Images (.zip)</button>
+                <button id="clearResultsBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500/50 w-full sm:w-auto">Clear Results</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1">
+                <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Live Log</h2>
+                <div id="logContainer" class="bg-gray-800 rounded-md p-4 h-96 overflow-y-auto font-mono text-xs leading-relaxed">
+                    <div id="logPlaceholder" class="text-gray-500">Awaiting input...</div>
+                </div>
+            </div>
+            <div class="lg:col-span-2">
+                <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Fetched Images Preview</h2>
+                <div id="resultsContainer" class="bg-gray-800 rounded-md p-4 h-96 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div id="resultsPlaceholder" class="col-span-full text-gray-500 text-center py-16">Fetched images will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const pidInput = document.getElementById('pidInput');
+        const startBtn = document.getElementById('startBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearResultsBtn = document.getElementById('clearResultsBtn');
+        const logContainer = document.getElementById('logContainer');
+        const resultsContainer = document.getElementById('resultsContainer');
+        let logPlaceholder = document.getElementById('logPlaceholder');
+        let resultsPlaceholder = document.getElementById('resultsPlaceholder');
+
+        let isFetching = false;
+        let zip; // JSZip instance
+        let imageCount = 0;
+
+        // --- UI Logic ---
+        function setFetchingUIState(isFetching) {
+            startBtn.disabled = isFetching;
+            pidInput.disabled = isFetching;
+            clearResultsBtn.disabled = isFetching;
+            startBtn.textContent = isFetching ? 'Fetching...' : 'Fetch Images';
+            downloadBtn.classList.add('hidden');
+        }
+
+        function logActivity(message, type = 'info') {
+            if (logPlaceholder) {
+                logPlaceholder.remove();
+                logPlaceholder = null;
+            }
+            const p = document.createElement('p');
+            const colorClasses = { info: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', warn: 'text-yellow-400' };
+            p.className = `${colorClasses[type]} mb-1`;
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.prepend(p);
+        }
+        
+        function addResult(url, filename) {
+            if (resultsPlaceholder) {
+                resultsPlaceholder.remove();
+                resultsPlaceholder = null;
+            }
+            const div = document.createElement('div');
+            div.className = 'found-item bg-gray-900/50 p-2 rounded-lg flex flex-col gap-2';
+            div.innerHTML = `
+                <img src="${url}" class="w-full h-auto object-contain rounded-md aspect-square" title="${filename}">
+                <span class="text-xs text-center text-gray-400 truncate">${filename}</span>
+            `;
+            resultsContainer.prepend(div);
+        }
+
+        // --- Core Logic ---
+        function parsePIDs(text) {
+            const pidRegex = /\b\d{5}\b/g;
+            const matches = text.match(pidRegex);
+            return matches ? [...new Set(matches)] : []; // Return unique PIDs
+        }
+
+        function sanitizeFilename(name) {
+            // Replaces special characters with a hyphen, removes extra spaces
+            return name.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-');
+        }
+
+        async function fetchWithProxy(url) {
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl, { headers: { 'x-cors-api-key': 'c3554ca1' } });
+            if (!response.ok) {
+                throw new Error(`Proxy/Network Error: HTTP ${response.status}`);
+            }
+            return response;
+        }
+
+        async function startFetching() {
+            const pidsToScan = parsePIDs(pidInput.value);
+            if (pidsToScan.length === 0) {
+                logActivity("No valid 5-digit PIDs found in the input text.", 'error');
+                return;
+            }
+
+            setFetchingUIState(true);
+            resultsContainer.innerHTML = '<div id="resultsPlaceholder" class="col-span-full text-gray-500 text-center py-16">Fetched images will appear here...</div>';
+            resultsPlaceholder = document.getElementById('resultsPlaceholder');
+
+            zip = new JSZip();
+            imageCount = 0;
+            logActivity(`Found ${pidsToScan.length} PIDs. Starting fetch...`);
+
+            for (const pid of pidsToScan) {
+                try {
+                    const apiUrl = `https://www.funko.com/on/demandware.store/Sites-FunkoUS-Site/en_US/Wishlist-GetProduct?pid=${pid}`;
+                    const response = await fetchWithProxy(apiUrl);
+                    const data = await response.json();
+
+                    if (data.product && data.product.images && data.product.images['hi-res']) {
+                        const productName = data.product.productName;
+                        logActivity(`Found ${data.product.images['hi-res'].length} images for ${productName} (PID: ${pid})`, 'info');
+                        
+                        let imageIndex = 1;
+                        for (const img of data.product.images['hi-res']) {
+                            const imageUrl = `https://funko.com${img.url}`;
+                            if (imageUrl.includes('missing-product-image')) {
+                                logActivity(`Skipping placeholder image for ${productName}`, 'warn');
+                                continue;
+                            }
+                            
+                            logActivity(`Downloading: ${imageUrl.split('/').pop()}`);
+                            const imageResponse = await fetchWithProxy(imageUrl);
+                            const imageBlob = await imageResponse.blob();
+                            
+                            const fileExtension = img.url.split('.').pop();
+                            const sanitizedName = sanitizeFilename(productName);
+                            const filename = `${sanitizedName}-${imageIndex}.${fileExtension}`;
+                            
+                            zip.file(filename, imageBlob);
+                            addResult(URL.createObjectURL(imageBlob), filename);
+                            imageCount++;
+                            imageIndex++;
+                        }
+                    } else {
+                        logActivity(`No product data or images found for PID: ${pid}`, 'warn');
+                    }
+                } catch (error) {
+                    logActivity(`Failed to process PID ${pid}: ${error.message}`, 'error');
+                }
+                await new Promise(resolve => setTimeout(resolve, 200)); // Be nice to the server
+            }
+
+            logActivity(`--- Fetching Complete. Found ${imageCount} total images. ---`, 'success');
+            if (imageCount > 0) {
+                downloadBtn.classList.remove('hidden');
+            }
+            setFetchingUIState(false);
+        }
+
+        function downloadZip() {
+            if (!zip || imageCount === 0) {
+                logActivity('No images to download.', 'error');
+                return;
+            }
+            logActivity('Generating ZIP file... this may take a moment.', 'info');
+            zip.generateAsync({ type: "blob" })
+                .then(function(content) {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `funko-images-${Date.now()}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    logActivity('Download started.', 'success');
+                });
+        }
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', startFetching);
+        downloadBtn.addEventListener('click', downloadZip);
+        clearResultsBtn.addEventListener('click', () => {
+            if (isFetching) return;
+            resultsContainer.innerHTML = '<div id="resultsPlaceholder" class="col-span-full text-gray-500 text-center py-16">Fetched images will appear here...</div>';
+            resultsPlaceholder = document.getElementById('resultsPlaceholder');
+            logContainer.innerHTML = '<div id="logPlaceholder" class="text-gray-500">Awaiting input...</div>';
+            logPlaceholder = document.getElementById('logPlaceholder');
+            downloadBtn.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
