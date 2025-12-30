@@ -87,7 +87,9 @@
                 tag: <><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><path d="M7 7h.01" /></>,
                 database: <><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></>,
                 clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
-                lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>
+                lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+                user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+                logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></>
             };
 
             return (
@@ -175,6 +177,12 @@
             const [firestoreError, setFirestoreError] = useState(null);
             const [permissionError, setPermissionError] = useState(false);
             const [timeoutError, setTimeoutError] = useState(false);
+            
+            // Login State
+            const [email, setEmail] = useState("");
+            const [password, setPassword] = useState("");
+            const [isRegistering, setIsRegistering] = useState(false);
+            const [authLoading, setAuthLoading] = useState(false);
 
             const fileInputRef = useRef(null);
             const textareaRef = useRef(null);
@@ -182,18 +190,10 @@
             // Auth
             useEffect(() => {
                 if (!auth) return;
-                const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-                    if (currentUser) {
-                        setUser(currentUser);
+                const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+                    setUser(currentUser);
+                    if(currentUser) {
                         setAuthError(null);
-                    } else {
-                        // Auto sign in anonymously
-                        try {
-                            await auth.signInAnonymously();
-                        } catch (e) {
-                            console.error("Auth error", e);
-                            setAuthError(e.message);
-                        }
                     }
                 });
                 return () => unsubscribe();
@@ -246,6 +246,40 @@
                     clearTimeout(connectionTimer);
                 };
             }, [user]);
+
+            // Handlers
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setAuthLoading(true);
+                setAuthError(null);
+                try {
+                    if (isRegistering) {
+                        await auth.createUserWithEmailAndPassword(email, password);
+                    } else {
+                        await auth.signInWithEmailAndPassword(email, password);
+                    }
+                } catch (e) {
+                    console.error("Login error:", e);
+                    if (e.code === 'auth/operation-not-allowed') {
+                         setAuthError("Email/Password login is disabled. Enable it in Firebase Console -> Authentication -> Sign-in method.");
+                    } else if (e.code === 'auth/email-already-in-use') {
+                         setAuthError("Account already exists. Try logging in instead.");
+                         setIsRegistering(false);
+                    } else {
+                        setAuthError(e.message);
+                    }
+                } finally {
+                    setAuthLoading(false);
+                }
+            };
+
+            const handleLogout = async () => {
+                try {
+                    await auth.signOut();
+                } catch(e) {
+                    console.error(e);
+                }
+            };
 
             // Logic Helpers
             const processImage = (base64Str, applyWatermark) => {
@@ -416,42 +450,74 @@
                 return null;
             };
 
-            // If we have an auth error (like missing config in console), show instructions
-            if (authError) {
+            // --- UI STATES ---
+
+            // 1. LOGIN SCREEN (If not logged in)
+            if (!user) {
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4 font-sans">
-                        <div className="max-w-lg bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-                             <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Icon name="zap" size={32} className="text-yellow-500" />
+                        <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 transform -rotate-6 shadow-lg">
+                                    <span className="text-white font-black text-2xl">P!</span>
+                                </div>
+                                <h1 className="text-2xl font-bold">Pop! Planner</h1>
+                                <p className="text-slate-400 text-sm mt-2">Log in to sync your drafts across devices</p>
                             </div>
-                            <h1 className="text-2xl font-bold mb-4 text-white">One More Step!</h1>
-                            <p className="mb-6 text-slate-400 leading-relaxed">
-                                Your app is deployed, but Firebase Authentication isn't enabled yet in the Console.
-                            </p>
-                             <div className="bg-slate-900 p-4 rounded-xl text-left mb-6 border border-slate-700">
-                                <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-300">
-                                    <li>Go to the <span className="text-blue-400 font-bold">Firebase Console</span>.</li>
-                                    <li>Click <span className="text-yellow-400 font-mono">Build</span> -> <span className="text-yellow-400 font-mono">Authentication</span>.</li>
-                                    <li>Click <strong>Get Started</strong>.</li>
-                                    <li>Go to the <strong>Sign-in method</strong> tab.</li>
-                                    <li>Click <strong>Anonymous</strong> and switch it to <strong>Enable</strong>.</li>
-                                </ol>
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <a href="https://console.firebase.google.com" target="_blank" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors">
-                                    Go to Firebase Console &rarr;
-                                </a>
-                                <button onClick={retryAuth} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-colors">
-                                    Retry Connection
+
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Email</label>
+                                    <input 
+                                        type="email" 
+                                        required
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        placeholder="name@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Password</label>
+                                    <input 
+                                        type="password" 
+                                        required
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                </div>
+
+                                {authError && (
+                                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg">
+                                        {authError}
+                                    </div>
+                                )}
+
+                                <button 
+                                    type="submit" 
+                                    disabled={authLoading}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {authLoading ? <Icon name="loader2" className="animate-spin" /> : (isRegistering ? "Create Account" : "Log In")}
+                                </button>
+                            </form>
+
+                            <div className="mt-6 text-center">
+                                <button 
+                                    onClick={() => setIsRegistering(!isRegistering)}
+                                    className="text-sm text-slate-400 hover:text-white underline"
+                                >
+                                    {isRegistering ? "Already have an account? Log in" : "Need an account? Create one"}
                                 </button>
                             </div>
-                            <p className="mt-4 text-xs text-slate-500 font-mono">{authError}</p>
                         </div>
                     </div>
                 );
             }
 
-            // If we have a Firestore error (Database not created), show instructions
+            // 2. ERROR STATES (Database/Permissions)
             if (firestoreError || timeoutError) {
                  const projectId = firebaseConfig.projectId;
                  const setupLink = `https://console.firebase.google.com/project/${projectId}/firestore`;
@@ -491,7 +557,6 @@
                 );
             }
 
-            // PERMISSION ERROR SCREEN (New)
             if (permissionError) {
                  const projectId = firebaseConfig.projectId;
                  const rulesLink = `https://console.firebase.google.com/project/${projectId}/firestore/rules`;
@@ -527,7 +592,7 @@
                 );
             }
 
-            // RENDER
+            // 3. MAIN APP (LoggedIn)
             return (
                 <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
                     
@@ -556,6 +621,9 @@
                             <div className="flex items-center gap-4">
                                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
                                     <Icon name={darkMode ? "sun" : "moon"} size={20} />
+                                </button>
+                                <button onClick={handleLogout} className="p-2 rounded-full hover:bg-red-500/20 text-red-400" title="Logout">
+                                    <Icon name="logout" size={20} />
                                 </button>
                             </div>
                         </div>
