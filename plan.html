@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pop! Planner</title>
+    <title>POP! Planner</title>
     
     <!-- 1. Load React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -14,14 +14,25 @@
     
     <!-- 3. Load Tailwind CSS (Styling) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151e2e' }
+                    }
+                }
+            }
+        }
+    </script>
     
-    <!-- 4. Load Firebase (Compat version for HTML usage) -->
+    <!-- 4. Load Firebase (Compat version) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Custom scrollbar for cleaner look */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -30,7 +41,7 @@
         .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -45,17 +56,12 @@
             measurementId: "G-V6ZD0QP9QN"
         };
         
-        // --- APP LOGIC STARTS HERE ---
-        
-        // Initialize Firebase
+        // --- APP LOGIC ---
         let auth, db;
-        // Simple check to ensure we aren't using placeholders
         const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "AIzaSyYOUR_API_KEY_HERE";
 
         if (isConfigured) {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             auth = firebase.auth();
             db = firebase.firestore();
         }
@@ -63,7 +69,15 @@
         const appId = "pop-planner-web"; 
         const { useState, useEffect, useRef } = React;
 
-        // --- ICONS ---
+        // --- THEME CONFIG ---
+        const THEMES = {
+            blue: { name: 'Funko Blue', primary: 'bg-blue-600', hover: 'hover:bg-blue-700', text: 'text-blue-500', border: 'border-blue-500', ring: 'focus:ring-blue-500' },
+            purple: { name: 'Chase Purple', primary: 'bg-purple-600', hover: 'hover:bg-purple-700', text: 'text-purple-500', border: 'border-purple-500', ring: 'focus:ring-purple-500' },
+            green: { name: 'ECCC Green', primary: 'bg-emerald-600', hover: 'hover:bg-emerald-700', text: 'text-emerald-500', border: 'border-emerald-500', ring: 'focus:ring-emerald-500' },
+            pink: { name: 'Valentine Pink', primary: 'bg-pink-600', hover: 'hover:bg-pink-700', text: 'text-pink-500', border: 'border-pink-500', ring: 'focus:ring-pink-500' },
+            orange: { name: 'Halloween', primary: 'bg-orange-600', hover: 'hover:bg-orange-700', text: 'text-orange-500', border: 'border-orange-500', ring: 'focus:ring-orange-500' },
+        };
+
         const Icon = ({ name, size = 18, className = "" }) => {
             const icons = {
                 plus: <path d="M5 12h14M12 5v14" />,
@@ -71,8 +85,9 @@
                 x: <path d="M18 6 6 18M6 6l12 12" />,
                 trash2: <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />,
                 copy: <><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></>,
-                layoutGrid: <><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></>,
+                grid: <><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></>,
                 list: <><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></>,
+                columns: <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18" />,
                 save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
                 moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
                 sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></>,
@@ -89,29 +104,13 @@
                 clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
                 lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
                 user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
-                logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></>
+                logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></>,
+                settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
+                loader2: <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             };
-
-            return (
-                <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width={size} 
-                    height={size} 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className={className}
-                >
-                    {icons[name]}
-                </svg>
-            );
+            return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
         };
 
-        // --- CONSTANTS ---
-        const DEFAULT_TAGS = "\n\n#Ad #FPN #FunkoPOPNews #Funko #FunkoPOP";
         const QUICK_LINKS = [
             { name: 'EE', url: ' fnkpp.com/EE ', color: 'bg-purple-100 text-purple-700 border-purple-200' },
             { name: 'Funko Shop', url: ' fnkpp.com/FS ', color: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -129,191 +128,133 @@
             { keyword: 'funko shop', label: 'Funko Shop', color: 'bg-blue-600 text-white' },
             { keyword: 'walmart', label: 'Walmart', color: 'bg-blue-500 text-white' },
         ];
+        const DEFAULT_TAGS = "\n\n#Ad #FPN #FunkoPOPNews #Funko #FunkoPOP";
 
-        // --- MAIN APP COMPONENT ---
         function App() {
-            // Configuration Guard
-            if (!isConfigured) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4 font-sans">
-                        <div className="max-w-lg bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-                            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Icon name="zap" size={32} className="text-red-500" />
-                            </div>
-                            <h1 className="text-2xl font-bold mb-4 text-white">Setup Required</h1>
-                            <p className="mb-6 text-slate-400 leading-relaxed">
-                                The app is almost ready! You need to add your Firebase API keys to the code to enable Cloud Storage.
-                            </p>
-                            
-                            <div className="bg-slate-900 p-4 rounded-xl text-left mb-6 border border-slate-700">
-                                <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-300">
-                                    <li>Open <span className="text-blue-400 font-mono">index.html</span> in your GitHub editor.</li>
-                                    <li>Find the line: <span className="text-yellow-400 font-mono">const firebaseConfig = ...</span></li>
-                                    <li>Replace the placeholder keys with your real keys from the Firebase Console.</li>
-                                    <li>Commit the changes and refresh this page.</li>
-                                </ol>
-                            </div>
+            // Check Config
+            if (!isConfigured) return <SetupScreen />;
 
-                            <a href="https://console.firebase.google.com" target="_blank" className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors">
-                                Go to Firebase Console &rarr;
-                            </a>
-                        </div>
-                    </div>
-                );
-            }
-
+            // State
+            const [user, setUser] = useState(null);
             const [drafts, setDrafts] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            // Visual State
+            const [theme, setTheme] = useState('blue');
+            const [darkMode, setDarkMode] = useState(true);
+            const [layout, setLayout] = useState('grid'); // 'grid', 'feed', 'compact'
+            const [showSettings, setShowSettings] = useState(false);
+
+            // Editor State
             const [inputText, setInputText] = useState("");
             const [selectedImage, setSelectedImage] = useState(null);
-            const [viewMode, setViewMode] = useState("grid");
-            const [darkMode, setDarkMode] = useState(true);
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
             const [isSaving, setIsSaving] = useState(false);
             const [pasteActive, setPasteActive] = useState(false);
             const [isPriority, setIsPriority] = useState(false);
             const [useWatermark, setUseWatermark] = useState(false);
-            const [authError, setAuthError] = useState(null);
-            const [firestoreError, setFirestoreError] = useState(null);
-            const [permissionError, setPermissionError] = useState(false);
-            const [timeoutError, setTimeoutError] = useState(false);
             
-            // Login State
-            const [email, setEmail] = useState("");
-            const [password, setPassword] = useState("");
-            const [isRegistering, setIsRegistering] = useState(false);
-            const [authLoading, setAuthLoading] = useState(false);
+            // Errors
+            const [authError, setAuthError] = useState(null);
+            const [systemError, setSystemError] = useState(null);
 
             const fileInputRef = useRef(null);
             const textareaRef = useRef(null);
 
-            // Auth
+            // 1. Auth Listener
             useEffect(() => {
                 if (!auth) return;
-                const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-                    setUser(currentUser);
-                    if(currentUser) {
-                        setAuthError(null);
-                    }
+                return auth.onAuthStateChanged(u => {
+                    setUser(u);
+                    if(u) setAuthError(null);
                 });
-                return () => unsubscribe();
             }, []);
 
-            // Data Sync with Timeout Check
+            // 2. Data & Settings Sync
             useEffect(() => {
                 if (!user || !db) return;
                 setLoading(true);
-                setTimeoutError(false);
-                setPermissionError(false);
-
-                // Setup connection timeout
-                const connectionTimer = setTimeout(() => {
-                    setTimeoutError(true);
-                }, 10000); // 10 seconds
-
-                const draftsRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts');
                 
-                const unsubscribe = draftsRef.onSnapshot((snapshot) => {
-                    clearTimeout(connectionTimer); // Connected successfully
-                    const fetchedDrafts = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    
-                    fetchedDrafts.sort((a, b) => {
-                        if (a.isPriority === b.isPriority) return b.createdAt - a.createdAt;
-                        return b.isPriority ? 1 : -1;
-                    });
-                    
-                    setDrafts(fetchedDrafts);
+                // Drafts Listener
+                const draftsRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts');
+                const unsubDrafts = draftsRef.onSnapshot(snap => {
+                    const fetched = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    fetched.sort((a,b) => (b.isPriority ? 1 : -1) || b.createdAt - a.createdAt);
+                    setDrafts(fetched);
                     setLoading(false);
-                    setFirestoreError(null);
-                    setTimeoutError(false);
-                    setPermissionError(false);
-                }, (error) => {
-                    clearTimeout(connectionTimer);
-                    console.error("Firestore sync error:", error);
-                    if (error.code === 'permission-denied') {
-                        setPermissionError(true);
-                    } else {
-                        setFirestoreError(error.message);
+                }, err => handleSystemError(err));
+
+                // Settings Listener (User Preference Persistence)
+                const prefRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('preferences');
+                const unsubPrefs = prefRef.onSnapshot(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.theme) setTheme(data.theme);
+                        if (data.layout) setLayout(data.layout);
+                        // Explicit check for undefined to allow 'false'
+                        if (data.darkMode !== undefined) setDarkMode(data.darkMode); 
                     }
-                    setLoading(false);
                 });
 
-                return () => {
-                    unsubscribe();
-                    clearTimeout(connectionTimer);
-                };
+                return () => { unsubDrafts(); unsubPrefs(); };
             }, [user]);
 
+            // 3. Apply Dark Mode
+            useEffect(() => {
+                if (darkMode) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+            }, [darkMode]);
+
+            // Save Preferences
+            const savePreferences = async (newTheme, newDark, newLayout) => {
+                if(!user) return;
+                // Update local state immediately for snappy feel
+                if(newTheme !== undefined) setTheme(newTheme);
+                if(newDark !== undefined) setDarkMode(newDark);
+                if(newLayout !== undefined) setLayout(newLayout);
+
+                // Debounce/Save to cloud
+                const prefRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('preferences');
+                await prefRef.set({
+                    theme: newTheme !== undefined ? newTheme : theme,
+                    darkMode: newDark !== undefined ? newDark : darkMode,
+                    layout: newLayout !== undefined ? newLayout : layout
+                }, { merge: true });
+            };
+
             // Handlers
-            const handleLogin = async (e) => {
-                e.preventDefault();
-                setAuthLoading(true);
-                setAuthError(null);
-                try {
-                    if (isRegistering) {
-                        await auth.createUserWithEmailAndPassword(email, password);
-                    } else {
-                        await auth.signInWithEmailAndPassword(email, password);
-                    }
-                } catch (e) {
-                    console.error("Login error:", e);
-                    if (e.code === 'auth/operation-not-allowed') {
-                         setAuthError("Email/Password login is disabled. Enable it in Firebase Console -> Authentication -> Sign-in method.");
-                    } else if (e.code === 'auth/email-already-in-use') {
-                         setAuthError("Account already exists. Try logging in instead.");
-                         setIsRegistering(false);
-                    } else {
-                        setAuthError(e.message);
-                    }
-                } finally {
-                    setAuthLoading(false);
-                }
+            const handleSystemError = (err) => {
+                console.error(err);
+                if (err.code === 'permission-denied') setSystemError('permission');
+                else if (err.code === 'not-found') setSystemError('not-found');
+                else setSystemError('unknown');
             };
 
-            const handleLogout = async () => {
-                try {
-                    await auth.signOut();
-                } catch(e) {
-                    console.error(e);
-                }
-            };
-
-            // Logic Helpers
-            const processImage = (base64Str, applyWatermark) => {
-                return new Promise((resolve) => {
+            const processImage = (base64Str, watermark) => {
+                return new Promise(resolve => {
                     const img = new Image();
                     img.src = base64Str;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const maxWidth = 1000;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > maxWidth) {
-                            height *= maxWidth / width;
-                            width = maxWidth;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
+                        const maxW = 1000;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxW) { h *= maxW/w; w = maxW; }
+                        canvas.width = w; canvas.height = h;
                         const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        if (applyWatermark) {
+                        ctx.drawImage(img, 0, 0, w, h);
+                        
+                        if (watermark) {
                             const text = "@FunkoPOPsNews";
-                            const fontSize = Math.max(20, width * 0.05);
-                            ctx.font = `bold ${fontSize}px sans-serif`;
-                            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                            ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+                            const fs = Math.max(20, w * 0.05);
+                            ctx.font = `bold ${fs}px sans-serif`;
+                            ctx.fillStyle = "rgba(255,255,255,0.8)";
+                            ctx.strokeStyle = "rgba(0,0,0,0.5)";
                             ctx.lineWidth = 4;
                             ctx.textAlign = "right";
                             ctx.textBaseline = "bottom";
-                            const padding = width * 0.03;
-                            ctx.strokeText(text, width - padding, height - padding);
-                            ctx.fillText(text, width - padding, height - padding);
+                            const pad = w * 0.03;
+                            ctx.strokeText(text, w - pad, h - pad);
+                            ctx.fillText(text, w - pad, h - pad);
                         }
                         resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
@@ -321,22 +262,20 @@
             };
 
             const handlePaste = async (e) => {
-                if (e.clipboardData.items) {
-                    const items = e.clipboardData.items;
-                    for (let i = 0; i < items.length; i++) {
-                        if (items[i].type.indexOf("image") !== -1) {
-                            e.preventDefault();
-                            setPasteActive(true);
-                            const blob = items[i].getAsFile();
-                            const reader = new FileReader();
-                            reader.onload = async (event) => {
-                                const processed = await processImage(event.target.result, false);
-                                setSelectedImage(processed);
-                                setPasteActive(false);
-                            };
-                            reader.readAsDataURL(blob);
-                            return;
-                        }
+                if (!e.clipboardData.items) return;
+                for (let i = 0; i < e.clipboardData.items.length; i++) {
+                    const item = e.clipboardData.items[i];
+                    if (item.type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        setPasteActive(true);
+                        const blob = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = async (evt) => {
+                            const processed = await processImage(evt.target.result, false);
+                            setSelectedImage(processed);
+                            setPasteActive(false);
+                        };
+                        reader.readAsDataURL(blob);
                     }
                 }
             };
@@ -346,427 +285,314 @@
                 return () => window.removeEventListener('paste', handlePaste);
             }, []);
 
-            const handleAddDraft = async () => {
+            const saveDraft = async () => {
                 if ((!inputText.trim() && !selectedImage) || !user) return;
                 setIsSaving(true);
                 try {
-                    let finalImage = selectedImage;
-                    if (selectedImage && useWatermark) {
-                        finalImage = await processImage(selectedImage, true);
-                    }
-                    const newDraft = {
+                    let img = selectedImage;
+                    if (img && useWatermark) img = await processImage(img, true);
+                    
+                    await db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts').add({
                         text: inputText,
-                        image: finalImage,
+                        image: img,
                         date: new Date().toLocaleString(),
                         createdAt: Date.now(),
-                        isPriority: isPriority,
+                        isPriority,
                         status: 'draft'
-                    };
-                    await db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts').add(newDraft);
+                    });
                     setInputText("");
                     setSelectedImage(null);
                     setIsPriority(false);
                     setUseWatermark(false);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                } catch (err) { console.error(err); alert("Save failed"); } 
+                } catch(e) { console.error(e); alert("Save failed"); }
                 finally { setIsSaving(false); }
             };
 
-            const handleImageChange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = async () => {
-                        const processed = await processImage(reader.result, false);
-                        setSelectedImage(processed);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
+            // Render Logic
+            if (!user) return <AuthScreen auth={auth} error={authError} setError={setAuthError} />;
+            if (systemError) return <ErrorScreen type={systemError} config={firebaseConfig} />;
 
-            const insertLink = (link) => {
-                const cursorPos = textareaRef.current.selectionStart;
-                const textBefore = inputText.substring(0, cursorPos);
-                const textAfter = inputText.substring(cursorPos);
-                setInputText(`${textBefore}${link}${textAfter}`);
-                textareaRef.current.focus();
-            };
+            const T = THEMES[theme]; // Active Theme Config
 
-            const useFirstLookTemplate = () => {
-                setInputText(`🚨 FIRST LOOK! New Funko POPs revealed:\n\n[Details Here]\n${DEFAULT_TAGS}`);
-            };
-
-            const insertHashtags = () => {
-                setInputText(prev => prev + DEFAULT_TAGS);
-                textareaRef.current.focus();
-            };
-
-            const deleteDraft = async (docId) => {
-                if (!user) return;
-                try { await db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts').doc(docId).delete(); } catch (e) {}
-            };
-
-            const togglePriority = async (docId, currentVal) => {
-                if (!user) return;
-                try { await db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts').doc(docId).update({ isPriority: !currentVal }); } catch (e) {}
-            };
-
-            const copyToClipboard = (text) => {
-                if (!text) return;
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-            };
-
-            const postToTwitter = (text) => {
-                if (!text) return;
-                const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-                window.open(twitterUrl, '_blank');
-            };
-
-            const retryAuth = async () => {
-                setAuthError(null);
-                setFirestoreError(null); // Clear both
-                setTimeoutError(false);
-                setPermissionError(false);
-                try {
-                    await auth.signInAnonymously();
-                } catch (e) {
-                    console.error("Retry failed", e);
-                    setAuthError(e.message);
-                }
-            };
-
-            const getRetailerBadge = (text) => {
-                if (!text) return null;
-                const lowerText = text.toLowerCase();
-                const match = RETAILERS.find(r => lowerText.includes(r.keyword));
-                if (match) {
-                    return <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${match.color} shadow-sm`}>{match.label}</span>;
-                }
-                return null;
-            };
-
-            // --- UI STATES ---
-
-            // 1. LOGIN SCREEN (If not logged in)
-            if (!user) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4 font-sans">
-                        <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
-                            <div className="text-center mb-8">
-                                <div className="w-16 h-16 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 transform -rotate-6 shadow-lg">
-                                    <span className="text-white font-black text-2xl">P!</span>
-                                </div>
-                                <h1 className="text-2xl font-bold">Pop! Planner</h1>
-                                <p className="text-slate-400 text-sm mt-2">Log in to sync your drafts across devices</p>
-                            </div>
-
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Email</label>
-                                    <input 
-                                        type="email" 
-                                        required
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        placeholder="name@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Password</label>
-                                    <input 
-                                        type="password" 
-                                        required
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                </div>
-
-                                {authError && (
-                                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg">
-                                        {authError}
-                                    </div>
-                                )}
-
-                                <button 
-                                    type="submit" 
-                                    disabled={authLoading}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {authLoading ? <Icon name="loader2" className="animate-spin" /> : (isRegistering ? "Create Account" : "Log In")}
-                                </button>
-                            </form>
-
-                            <div className="mt-6 text-center">
-                                <button 
-                                    onClick={() => setIsRegistering(!isRegistering)}
-                                    className="text-sm text-slate-400 hover:text-white underline"
-                                >
-                                    {isRegistering ? "Already have an account? Log in" : "Need an account? Create one"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 2. ERROR STATES (Database/Permissions)
-            if (firestoreError || timeoutError) {
-                 const projectId = firebaseConfig.projectId;
-                 const setupLink = `https://console.firebase.google.com/project/${projectId}/firestore`;
-                 
-                 return (
-                    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4 font-sans">
-                        <div className="max-w-lg bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-                             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                {timeoutError ? <Icon name="clock" size={32} className="text-red-500" /> : <Icon name="database" size={32} className="text-red-500" />}
-                            </div>
-                            <h1 className="text-2xl font-bold mb-4 text-white">Create Database</h1>
-                            <p className="mb-6 text-slate-400 leading-relaxed">
-                                {timeoutError 
-                                    ? "Connection timed out. This usually means the Firestore Database hasn't been created yet."
-                                    : "You are signed in, but the database doesn't exist yet! You need to create it in the Firebase Console."}
-                            </p>
-                             <div className="bg-slate-900 p-4 rounded-xl text-left mb-6 border border-slate-700">
-                                <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-300">
-                                    <li>Click the <strong>Go to Database Setup</strong> button below.</li>
-                                    <li>Click <strong>Create Database</strong>.</li>
-                                    <li>Choose a location (e.g., nam5).</li>
-                                    <li>Select <strong>Start in Test Mode</strong> (Important!).</li>
-                                    <li>Click <strong>Create</strong>.</li>
-                                </ol>
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <a href={setupLink} target="_blank" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2">
-                                    <Icon name="link" size={18} /> Go to Database Setup
-                                </a>
-                                <button onClick={() => window.location.reload()} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-colors">
-                                    I did this, Refresh Page
-                                </button>
-                            </div>
-                            <p className="mt-4 text-xs text-slate-500 font-mono break-all">{firestoreError || "Timeout Error"}</p>
-                        </div>
-                    </div>
-                );
-            }
-
-            if (permissionError) {
-                 const projectId = firebaseConfig.projectId;
-                 const rulesLink = `https://console.firebase.google.com/project/${projectId}/firestore/rules`;
-                 
-                 return (
-                    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4 font-sans">
-                        <div className="max-w-lg bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-                             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Icon name="lock" size={32} className="text-red-500" />
-                            </div>
-                            <h1 className="text-2xl font-bold mb-4 text-white">Database Locked</h1>
-                            <p className="mb-6 text-slate-400 leading-relaxed">
-                                Your database is online, but <strong>Security Rules</strong> are blocking access.
-                            </p>
-                             <div className="bg-slate-900 p-4 rounded-xl text-left mb-6 border border-slate-700">
-                                <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-300">
-                                    <li>Click the button below to go to <strong>Firestore Rules</strong>.</li>
-                                    <li>Delete the existing code in the editor.</li>
-                                    <li>Paste this code:<br/><code className="block mt-2 bg-slate-800 p-2 rounded text-xs text-green-400">allow read, write: if request.auth != null;</code></li>
-                                    <li>Click <strong>Publish</strong>.</li>
-                                </ol>
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <a href={rulesLink} target="_blank" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2">
-                                    <Icon name="link" size={18} /> Update Rules
-                                </a>
-                                <button onClick={() => window.location.reload()} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-colors">
-                                    I Fixed It, Refresh Page
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 3. MAIN APP (LoggedIn)
             return (
-                <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+                <div className={`min-h-screen ${darkMode ? 'text-slate-100' : 'text-slate-900'} pb-20`}>
                     
+                    {/* Paste Overlay */}
                     {pasteActive && (
                         <div className="fixed inset-0 z-50 bg-blue-500/20 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-                            <div className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-xl shadow-xl animate-bounce">
+                            <div className={`${T.primary} text-white px-6 py-3 rounded-xl font-bold text-xl shadow-xl animate-bounce`}>
                                 Processing Image...
                             </div>
                         </div>
                     )}
 
-                    {/* Navbar */}
+                    {/* Nav */}
                     <nav className={`sticky top-0 z-40 border-b backdrop-blur-md ${darkMode ? 'bg-slate-900/80 border-slate-700' : 'bg-white/80 border-slate-200'}`}>
-                        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center transform -rotate-6 shadow-lg">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transform -rotate-6 shadow-lg ${T.primary}`}>
                                     <span className="text-white font-black text-lg">P!</span>
                                 </div>
-                                <h1 className="font-bold text-xl tracking-tight hidden sm:block">Pop! Planner</h1>
-                                <div className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${user ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                                    <Icon name={user ? "wifi" : "wifiOff"} size={12} />
-                                    <span className="hidden xs:inline">{user ? 'Cloud Sync' : 'Offline'}</span>
-                                </div>
+                                <h1 className="font-bold text-xl tracking-tight hidden sm:block">POP! Planner</h1>
                             </div>
                             
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-                                    <Icon name={darkMode ? "sun" : "moon"} size={20} />
-                                </button>
-                                <button onClick={handleLogout} className="p-2 rounded-full hover:bg-red-500/20 text-red-400" title="Logout">
-                                    <Icon name="logout" size={20} />
+                            <div className="flex items-center gap-2">
+                                <div className={`flex items-center rounded-lg p-1 border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                                    <button onClick={() => savePreferences(undefined, undefined, 'grid')} className={`p-1.5 rounded ${layout==='grid' ? (darkMode?'bg-slate-700':'bg-slate-100') : 'opacity-50'}`}><Icon name="grid"/></button>
+                                    <button onClick={() => savePreferences(undefined, undefined, 'feed')} className={`p-1.5 rounded ${layout==='feed' ? (darkMode?'bg-slate-700':'bg-slate-100') : 'opacity-50'}`}><Icon name="columns"/></button>
+                                    <button onClick={() => savePreferences(undefined, undefined, 'compact')} className={`p-1.5 rounded ${layout==='compact' ? (darkMode?'bg-slate-700':'bg-slate-100') : 'opacity-50'}`}><Icon name="list"/></button>
+                                </div>
+                                <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-colors ${showSettings ? T.text : 'text-slate-400 hover:text-slate-500'}`}>
+                                    <Icon name="settings" size={20} />
                                 </button>
                             </div>
                         </div>
+                        
+                        {/* Settings Dropdown Panel */}
+                        {showSettings && (
+                            <div className={`border-b ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                                <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Color Theme</label>
+                                        <div className="flex gap-2">
+                                            {Object.keys(THEMES).map(k => (
+                                                <button 
+                                                    key={k} 
+                                                    onClick={() => savePreferences(k, undefined, undefined)}
+                                                    className={`w-8 h-8 rounded-full border-2 ${theme === k ? 'border-white ring-2 ring-slate-400' : 'border-transparent'} ${THEMES[k].primary}`}
+                                                    title={THEMES[k].name}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between md:justify-end gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Display Mode</label>
+                                            <button onClick={() => savePreferences(undefined, !darkMode, undefined)} className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${darkMode ? 'border-slate-600 hover:bg-slate-700' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                                                <Icon name={darkMode ? "moon" : "sun"} />
+                                                <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Account</label>
+                                            <button onClick={() => auth.signOut()} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10">
+                                                <Icon name="logout" />
+                                                <span>Sign Out</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </nav>
 
-                    <main className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
                         
-                        {/* Composer */}
-                        <div className="lg:col-span-4 xl:col-span-4">
+                        {/* Composer (Left) */}
+                        <div className="lg:col-span-4">
                             <div className={`sticky top-24 rounded-2xl p-4 shadow-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-                                
-                                <div className="flex justify-between items-start mb-4">
+                                <div className="flex justify-between items-center mb-4">
                                     <h2 className="font-semibold flex items-center gap-2">
-                                        <Icon name="plus" size={18} className="text-blue-500" /> New Idea
+                                        <Icon name="plus" className={T.text} /> New Idea
                                     </h2>
-                                    <button onClick={useFirstLookTemplate} className="text-xs bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 px-2 py-1 rounded-md font-medium transition-colors flex items-center gap-1">
-                                        <Icon name="zap" size={12} /> First Look
+                                    <button 
+                                        onClick={() => setInputText(prev => `🚨 FIRST LOOK! New Funko POPs revealed:\n\n[Details Here]\n${DEFAULT_TAGS}`)}
+                                        className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                    >
+                                        First Look Template
                                     </button>
                                 </div>
-                                
+
                                 {selectedImage && (
-                                    <div className="relative mb-4 group animate-in fade-in zoom-in duration-300">
-                                        <img src={selectedImage} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-600/20" />
-                                        <button onClick={() => setSelectedImage(null)} className="absolute top-2 right-2 bg-black/70 hover:bg-red-500 text-white p-1.5 rounded-full transition-colors backdrop-blur-sm">
-                                            <Icon name="x" size={14} />
-                                        </button>
+                                    <div className="relative mb-4 group">
+                                        <img src={selectedImage} className="w-full h-48 object-cover rounded-xl border border-slate-500/20" />
+                                        <button onClick={() => setSelectedImage(null)} className="absolute top-2 right-2 bg-black/70 hover:bg-red-600 text-white p-1 rounded-full"><Icon name="x" size={14}/></button>
                                     </div>
                                 )}
 
-                                <div className="relative">
+                                <div className="relative mb-3">
                                     <textarea
                                         ref={textareaRef}
                                         value={inputText}
-                                        onChange={(e) => setInputText(e.target.value)}
-                                        placeholder="Paste details or images here..."
-                                        className={`w-full h-40 p-3 pb-10 rounded-xl resize-none mb-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all ${darkMode ? 'bg-slate-900/50 border-slate-700 placeholder-slate-500 text-white' : 'bg-slate-50 border-slate-200 placeholder-slate-400 text-slate-900'} border`}
+                                        onChange={e => setInputText(e.target.value)}
+                                        placeholder="Paste images or type news here..."
+                                        className={`w-full h-32 p-3 pb-8 rounded-xl resize-none outline-none focus:ring-2 transition-all ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'} border ${T.ring}`}
                                     />
-                                    <div className="absolute bottom-4 right-2 flex gap-2">
-                                        <button onClick={insertHashtags} title="Add hashtags" className={`p-1.5 rounded-md text-xs font-bold transition-colors ${darkMode ? 'bg-slate-800 text-blue-400 hover:bg-blue-900/50' : 'bg-white text-blue-600 hover:bg-blue-50 shadow-sm border border-slate-200'}`}>
-                                            <Icon name="hash" size={14} />
-                                        </button>
-                                    </div>
+                                    <button onClick={() => { setInputText(p => p + DEFAULT_TAGS); textareaRef.current.focus(); }} className="absolute bottom-3 right-3 opacity-50 hover:opacity-100 p-1 rounded bg-slate-200 dark:bg-slate-700"><Icon name="hash" size={14} /></button>
                                 </div>
 
-                                <div className="mb-4">
-                                    <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider flex items-center gap-1">
-                                        <Icon name="link" size={12} /> Quick Links
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {QUICK_LINKS.map((link) => (
-                                            <button key={link.name} onClick={() => insertLink(link.url)} className={`text-xs px-2 py-1 rounded border transition-transform active:scale-95 ${link.color}`}>
-                                                {link.name}
-                                            </button>
-                                        ))}
-                                    </div>
+                                {/* Quick Links */}
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {QUICK_LINKS.map(l => (
+                                        <button key={l.name} onClick={() => {
+                                            const start = textareaRef.current.selectionStart;
+                                            setInputText(v => v.slice(0, start) + l.url + v.slice(start));
+                                        }} className={`text-[10px] px-2 py-1 rounded border opacity-80 hover:opacity-100 ${l.color}`}>{l.name}</button>
+                                    ))}
                                 </div>
 
-                                <div className="flex gap-4 mb-4">
-                                    <button onClick={() => setIsPriority(!isPriority)} className={`flex-1 py-2 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 transition-colors ${isPriority ? 'bg-red-500/10 text-red-500 border-red-500/50' : darkMode ? 'border-slate-700 text-slate-400 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
-                                        <Icon name="star" size={16} className={isPriority ? "fill-current" : ""} /> {isPriority ? 'Priority' : 'Normal'}
-                                    </button>
-                                    <button onClick={() => setUseWatermark(!useWatermark)} className={`flex-1 py-2 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 transition-colors ${useWatermark ? 'bg-blue-500/10 text-blue-500 border-blue-500/50' : darkMode ? 'border-slate-700 text-slate-400 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
-                                        <Icon name="tag" size={16} /> {useWatermark ? 'Watermark' : 'No Mark'}
-                                    </button>
-                                </div>
-
+                                {/* Actions */}
                                 <div className="flex gap-2">
-                                    <button onClick={() => fileInputRef.current.click()} className={`p-3 rounded-xl transition-colors flex items-center justify-center border ${darkMode ? 'border-slate-700 hover:bg-slate-700' : 'border-slate-200 hover:bg-slate-50'}`}>
-                                        <Icon name="image" size={20} className={selectedImage ? 'text-green-500' : 'text-slate-400'} />
+                                    <button onClick={() => setIsPriority(!isPriority)} className={`flex-1 py-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 ${isPriority ? 'bg-red-500/10 text-red-500 border-red-500' : 'border-slate-500/20 opacity-70'}`}>
+                                        <Icon name="star" size={14} className={isPriority ? 'fill-current' : ''} /> Priority
                                     </button>
-                                    <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
+                                    <button onClick={() => setUseWatermark(!useWatermark)} className={`flex-1 py-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 ${useWatermark ? `${T.text} border-current bg-slate-500/10` : 'border-slate-500/20 opacity-70'}`}>
+                                        <Icon name="tag" size={14} /> Watermark
+                                    </button>
+                                </div>
 
-                                    <button onClick={handleAddDraft} disabled={(!inputText.trim() && !selectedImage) || isSaving} className={`flex-1 rounded-xl font-bold transition-all transform active:scale-95 flex items-center justify-center gap-2 ${(!inputText.trim() && !selectedImage) || isSaving ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}>
-                                        {isSaving ? <Icon name="loader2" size={18} className="animate-spin" /> : <Icon name="save" size={18} />}
-                                        {isSaving ? 'Saving...' : 'Save Draft'}
+                                <div className="flex gap-2 mt-4">
+                                    <button onClick={() => fileInputRef.current.click()} className={`p-3 rounded-xl border hover:bg-slate-50 dark:hover:bg-slate-700 ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                                        <Icon name="image" className={selectedImage ? T.text : 'text-slate-400'} />
+                                    </button>
+                                    <input type="file" ref={fileInputRef} onChange={e => {
+                                        if(e.target.files[0]) {
+                                            const r = new FileReader();
+                                            r.onload = ev => processImage(ev.target.result, false).then(setSelectedImage);
+                                            r.readAsDataURL(e.target.files[0]);
+                                        }
+                                    }} hidden accept="image/*" />
+                                    
+                                    <button onClick={saveDraft} disabled={isSaving || (!inputText && !selectedImage)} className={`flex-1 rounded-xl font-bold text-white flex items-center justify-center gap-2 ${T.primary} ${T.hover} disabled:opacity-50 disabled:cursor-not-allowed`}>
+                                        {isSaving ? <Icon name="loader2" className="animate-spin" /> : <Icon name="save" />} Save
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Feed */}
-                        <div className="lg:col-span-8 xl:col-span-8">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    Your Drafts {loading && <Icon name="loader2" size={16} className="animate-spin text-slate-500" />}
-                                </h2>
-                                <div className={`flex p-1 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-                                    <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? (darkMode ? 'bg-slate-700' : 'bg-slate-100') : 'text-slate-500'}`}><Icon name="layoutGrid" size={18} /></button>
-                                    <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? (darkMode ? 'bg-slate-700' : 'bg-slate-100') : 'text-slate-500'}`}><Icon name="list" size={18} /></button>
-                                </div>
-                            </div>
-
-                            {!user ? (
-                                <div className="text-center py-20 text-slate-500">Connecting to Cloud...</div>
-                            ) : drafts.length === 0 && !loading ? (
-                                <div className="text-center py-20 text-slate-500 border-2 border-dashed rounded-3xl border-slate-700">No drafts found.</div>
-                            ) : (
-                                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'space-y-4'}>
-                                    {drafts.map((draft) => (
-                                        <div key={draft.id} className={`group relative overflow-hidden rounded-2xl border transition-all duration-200 hover:shadow-xl ${darkMode ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-blue-200'} ${draft.isPriority ? 'ring-2 ring-red-500/50 border-red-500/30' : ''}`}>
-                                            {draft.isPriority && (
-                                                <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                                                    <Icon name="star" size={10} className="fill-current" /> PRIORITY
-                                                </div>
-                                            )}
-
-                                            <div className={viewMode === 'list' ? 'flex flex-row' : 'flex flex-col'}>
-                                                {draft.image && (
-                                                    <div className={`relative overflow-hidden ${viewMode === 'list' ? 'w-48 h-auto shrink-0' : 'w-full h-56'}`}>
-                                                        <img src={draft.image} alt="Draft attachment" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                                    </div>
-                                                )}
-
-                                                <div className="p-5 flex flex-col flex-grow">
-                                                    <div className="mb-2 flex gap-2">
-                                                        {getRetailerBadge(draft.text)}
-                                                    </div>
-
-                                                    <div className="flex-grow">
-                                                        <p className={`whitespace-pre-wrap leading-relaxed text-sm ${!draft.text ? 'italic opacity-50' : ''}`}>
-                                                            {draft.text || "No text content"}
-                                                        </p>
-                                                    </div>
-                                                    
-                                                    <div className={`mt-4 pt-4 flex justify-between items-center border-t ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
-                                                        <span className="text-xs font-medium text-slate-500">{draft.date}</span>
-                                                        <div className="flex gap-2">
-                                                            <button onClick={() => togglePriority(draft.id, draft.isPriority)} className={`p-2 rounded-lg ${draft.isPriority ? 'text-red-500' : 'text-slate-500 hover:text-red-500'}`} title="Toggle Priority"><Icon name="star" size={16} className={draft.isPriority ? "fill-current" : ""} /></button>
-                                                            <button onClick={() => postToTwitter(draft.text)} className="p-2 rounded-lg text-slate-400 hover:text-blue-500" title="Post to X"><Icon name="twitter" size={16} /></button>
-                                                            <button onClick={() => copyToClipboard(draft.text)} className="p-2 rounded-lg text-slate-400 hover:text-blue-500" title="Copy"><Icon name="copy" size={16} /></button>
-                                                            <button onClick={() => deleteDraft(draft.id)} className="p-2 rounded-lg text-slate-400 hover:text-red-500" title="Delete"><Icon name="trash2" size={16} /></button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                        {/* Feed (Right) */}
+                        <div className="lg:col-span-8">
+                            {drafts.length === 0 && !loading && (
+                                <div className={`text-center py-20 border-2 border-dashed rounded-3xl ${darkMode ? 'border-slate-800 text-slate-600' : 'border-slate-200 text-slate-400'}`}>
+                                    <div className="w-16 h-16 bg-slate-500/10 rounded-full flex items-center justify-center mx-auto mb-4"><Icon name="cloud" size={32}/></div>
+                                    <p>No drafts yet. Start planning!</p>
                                 </div>
                             )}
+
+                            <div className={`${
+                                layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 
+                                layout === 'compact' ? 'flex flex-col gap-2' : 
+                                'flex flex-col gap-8' /* Feed mode */
+                            }`}>
+                                {drafts.map(d => (
+                                    <div key={d.id} className={`group relative overflow-hidden rounded-xl border transition-all hover:shadow-lg ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} ${d.isPriority ? 'ring-1 ring-red-500 border-red-500' : ''}`}>
+                                        
+                                        {/* Layout: Grid & Feed */}
+                                        {layout !== 'compact' && d.image && (
+                                            <div className={`relative ${layout === 'feed' ? 'w-full' : 'w-full h-48'} overflow-hidden bg-slate-900`}>
+                                                <img src={d.image} className="w-full h-full object-contain" />
+                                                {d.isPriority && <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow">PRIORITY</span>}
+                                            </div>
+                                        )}
+
+                                        <div className={`p-4 flex flex-col ${layout === 'compact' ? 'flex-row items-center gap-4' : ''}`}>
+                                            {layout === 'compact' && d.image && (
+                                                <img src={d.image} className="w-12 h-12 rounded object-cover bg-slate-800 shrink-0" />
+                                            )}
+                                            
+                                            <div className="flex-grow min-w-0">
+                                                {/* Retailer Badge Logic */}
+                                                <div className="flex gap-2 mb-2">
+                                                    {RETAILERS.map(r => (d.text || '').toLowerCase().includes(r.keyword) && (
+                                                        <span key={r.label} className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${r.color}`}>{r.label}</span>
+                                                    ))}
+                                                </div>
+                                                <p className={`whitespace-pre-wrap text-sm leading-relaxed ${layout === 'compact' ? 'truncate' : ''}`}>
+                                                    {d.text || <span className="italic opacity-50">Image only</span>}
+                                                </p>
+                                            </div>
+
+                                            <div className={`flex items-center gap-2 ${layout === 'compact' ? '' : 'mt-4 pt-4 border-t ' + (darkMode ? 'border-slate-700' : 'border-slate-100')}`}>
+                                                {layout !== 'compact' && <span className="text-xs opacity-50 flex-grow">{d.date.split(',')[0]}</span>}
+                                                
+                                                <button onClick={() => {
+                                                    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(d.text)}`;
+                                                    window.open(url, '_blank');
+                                                }} className={`p-2 rounded hover:bg-blue-500/10 hover:text-blue-500 text-slate-400`}><Icon name="twitter"/></button>
+                                                
+                                                <button onClick={() => {
+                                                    const el = document.createElement('textarea');
+                                                    el.value = d.text;
+                                                    document.body.appendChild(el);
+                                                    el.select();
+                                                    document.execCommand('copy');
+                                                    document.body.removeChild(el);
+                                                }} className={`p-2 rounded hover:bg-green-500/10 hover:text-green-500 text-slate-400`}><Icon name="copy"/></button>
+                                                
+                                                <button onClick={() => db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('drafts').doc(d.id).delete()} className="p-2 rounded hover:bg-red-500/10 hover:text-red-500 text-slate-400"><Icon name="trash2"/></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </main>
                 </div>
             );
+        }
+
+        // --- SUB COMPONENTS ---
+
+        function AuthScreen({ auth, error, setError }) {
+            const [isReg, setIsReg] = useState(false);
+            const [email, setEmail] = useState("");
+            const [pass, setPass] = useState("");
+            const [busy, setBusy] = useState(false);
+
+            const submit = async (e) => {
+                e.preventDefault();
+                setBusy(true); setError(null);
+                try {
+                    if(isReg) await auth.createUserWithEmailAndPassword(email, pass);
+                    else await auth.signInWithEmailAndPassword(email, pass);
+                } catch(err) {
+                    if (err.code === 'auth/operation-not-allowed') setError("Email Login is disabled in Firebase Console.");
+                    else if (err.code === 'auth/email-already-in-use') { setError("Email used. Log in instead."); setIsReg(false); }
+                    else setError(err.message);
+                } finally { setBusy(false); }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
+                    <div className="max-w-sm w-full bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl">
+                        <div className="text-center mb-6">
+                            <h1 className="text-2xl font-bold mb-2">POP! Planner</h1>
+                            <p className="text-sm text-slate-400">Sync your drafts everywhere</p>
+                        </div>
+                        <form onSubmit={submit} className="space-y-4">
+                            <input className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" type="email" placeholder="Email" required value={email} onChange={e=>setEmail(e.target.value)} />
+                            <input className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" type="password" placeholder="Password" required value={pass} onChange={e=>setPass(e.target.value)} />
+                            {error && <div className="text-xs text-red-400 bg-red-500/10 p-2 rounded">{error}</div>}
+                            <button disabled={busy} className="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition-colors">{busy ? '...' : (isReg ? 'Create Account' : 'Log In')}</button>
+                        </form>
+                        <button onClick={()=>setIsReg(!isReg)} className="w-full mt-4 text-xs text-slate-400 hover:text-white underline">{isReg ? 'Login instead' : 'Create new account'}</button>
+                    </div>
+                </div>
+            )
+        }
+
+        function ErrorScreen({ type, config }) {
+            const isPerm = type === 'permission';
+            const isMissing = type === 'not-found';
+            const link = isPerm 
+                ? `https://console.firebase.google.com/project/${config.projectId}/firestore/rules`
+                : `https://console.firebase.google.com/project/${config.projectId}/firestore`;
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4 text-center">
+                    <div className="max-w-md bg-slate-800 p-8 rounded-2xl border border-slate-700">
+                        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                            <Icon name={isPerm ? "lock" : "database"} size={32} />
+                        </div>
+                        <h2 className="text-xl font-bold mb-2">{isPerm ? "Database Locked" : "Create Database"}</h2>
+                        <p className="text-sm text-slate-400 mb-6">
+                            {isPerm ? "You need to enable 'Test Mode' in Firestore Rules." : "The database hasn't been created in Firebase Console yet."}
+                        </p>
+                        <a href={link} target="_blank" className="block w-full bg-blue-600 py-2 rounded-lg font-bold mb-2">Go to Console</a>
+                        <button onClick={()=>window.location.reload()} className="block w-full bg-slate-700 py-2 rounded-lg font-bold">I Fixed It, Refresh</button>
+                    </div>
+                </div>
+            )
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
