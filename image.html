@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Image Editor</title>
+    <title>Advanced Image Editor (32 Images)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -15,6 +15,7 @@
             width: 100%;
             height: auto;
             border-radius: 0.5rem;
+            touch-action: none; /* Prevent scrolling while dragging on touch */
         }
         .file-input-wrapper {
             position: relative;
@@ -63,10 +64,11 @@
 
     <div class="w-full max-w-5xl mx-auto">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Advanced Image Editor</h1>
-        <p class="text-center text-gray-600 mb-6">Add images and text, then use Arrange Mode to snap them into a grid.</p>
+        <p class="text-center text-gray-600 mb-6">Add up to 32 images, then use Arrange Mode to snap them into a grid.</p>
 
         <!-- Controls -->
         <div class="mb-4 p-4 bg-white rounded-lg shadow-md flex flex-col gap-4">
+            
             <!-- Top Row Controls -->
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 flex-wrap">
                 <div class="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
@@ -80,19 +82,21 @@
                         <button id="gridToggle" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none">
                             <span class="inline-block w-4 h-4 transform bg-white rounded-full translate-x-1"></span>
                         </button>
-                    </div>
-                     <div class="flex items-center gap-2">
+                    </div> 
+                    <div class="flex items-center gap-2">
                         <span class="font-medium text-gray-700">Arrange Mode:</span>
                         <button id="arrangeModeToggle" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none" disabled>
                             <span class="inline-block w-4 h-4 transform bg-white rounded-full translate-x-1"></span>
                         </button>
                     </div>
                 </div>
+
                 <div class="file-input-wrapper bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-lg shadow-md transition-all duration-300 cursor-pointer">
                     <span>Upload Images</span>
                     <input type="file" id="imageLoader" accept="image/*" multiple>
                 </div>
             </div>
+
             <!-- Middle Row Controls -->
             <div class="border-t border-gray-200 pt-4 mt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
                  <span class="font-medium text-gray-700">Global Size:</span>
@@ -106,6 +110,7 @@
                     Add Text
                  </button>
             </div>
+
             <!-- Bottom Row Controls -->
             <div class="border-t border-gray-200 pt-4 mt-2 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-4 flex-wrap">
@@ -121,6 +126,7 @@
                         <button id="generateBgBtn" class="px-3 py-1 rounded-md text-sm font-semibold bg-green-500 hover:bg-green-600 text-white">Generate</button>
                     </div>
                 </div>
+
                  <div class="flex items-center gap-2">
                      <button id="clearAllBtn" class="px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200 bg-red-100 text-red-700 hover:bg-red-200 flex items-center gap-2" disabled>
                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -196,7 +202,9 @@
         let isArrangeModeOn = false;
         let backgroundColor = '#ffffff';
         let backgroundImage = null;
-        const MAX_IMAGES = 16;
+        
+        // --- UPDATED CONFIGURATION ---
+        const MAX_IMAGES = 32; // Changed from 16 to 32
         const HANDLE_SIZE = 10;
         const PADDING = 40;
 
@@ -223,20 +231,31 @@
             const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
             const numImages = imageObjects.length;
             if (numImages === 0) return null;
+            
+            // Calculate columns and rows based on number of images
+            // For 32 images, this will typically result in a 6x6 grid structure
             const cols = Math.ceil(Math.sqrt(numImages));
             const rows = Math.ceil(numImages / cols);
+            
             const cellWidth = (canvas.width - (cols + 1) * PADDING) / cols;
             const cellHeight = (canvas.height - (rows + 1) * PADDING) / rows;
+            
             return { cols, rows, cellWidth, cellHeight };
         }
 
         function getCellIndexFromPos(pos) {
             const gridConfig = getGridConfiguration();
             if (!gridConfig) return -1;
+            
             const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
             const { cols, cellWidth, cellHeight } = gridConfig;
+            
             const col = Math.floor((pos.x - PADDING / 2) / (cellWidth + PADDING));
             const row = Math.floor((pos.y - PADDING / 2) / (cellHeight + PADDING));
+            
+            // Boundary checks
+            if (col < 0 || col >= cols || row < 0 || row >= Math.ceil(imageObjects.length / cols)) return -1;
+            
             const index = row * cols + col;
             return (index >= 0 && index < imageObjects.length) ? index : -1;
         }
@@ -244,14 +263,17 @@
         function snapAllImagesToGrid() {
             const gridConfig = getGridConfiguration();
             if (!gridConfig) return;
+            
             const { cols, cellWidth, cellHeight } = gridConfig;
             const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
 
             imageObjects.forEach((img, i) => {
                 const row = Math.floor(i / cols);
                 const col = i % cols;
+                
                 const cellX = PADDING + col * (cellWidth + PADDING);
                 const cellY = PADDING + row * (cellHeight + PADDING);
+                
                 img.x = cellX + (cellWidth - img.width) / 2;
                 img.y = cellY + (cellHeight - img.height) / 2;
             });
@@ -261,6 +283,11 @@
         function setCanvasSize() {
             canvas.width = 1080;
             canvas.height = currentAspectRatio === '1:1' ? 1080 : 1350;
+
+            // Re-apply smoothing settings as they reset on resize to prevent pixelation
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
             if (isArrangeModeOn) snapAllImagesToGrid();
             draw();
         }
@@ -268,6 +295,7 @@
         function draw(forDownload = false) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Background
             if (backgroundColor !== 'transparent') {
                 ctx.fillStyle = backgroundColor;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -279,12 +307,18 @@
 
             if (isGridVisible && !forDownload) drawGridLines();
 
+            // Draw objects in reverse order (so first in array is on top, but we iterate reverse for drawing order)
+            // Actually, we usually want later elements on top. Standard JS loop for painting:
+            // Let's stick to the original logic: render index 0 last? 
+            // The original code iterated backwards: `for (let i = sceneObjects.length - 1; i >= 0; i--)`
+            // This means index 0 is drawn LAST (on top). 
             for (let i = sceneObjects.length - 1; i >= 0; i--) {
                 const obj = sceneObjects[i];
                 if (draggedObject && obj.id === draggedObject.id) continue;
                 drawObject(obj);
             }
             
+            // Draw dragged object on top
             if (draggedObject) {
                  ctx.save();
                  ctx.globalAlpha = 0.6;
@@ -292,6 +326,7 @@
                  ctx.restore();
             }
 
+            // Draw selection box
             if (selectedObject && !isArrangeModeOn && !forDownload) {
                 drawSelection(selectedObject);
             }
@@ -313,7 +348,9 @@
             ctx.strokeStyle = 'rgba(59, 130, 246, 0.9)';
             ctx.lineWidth = 4;
             ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+            
             if (obj.type === 'image') {
+                // Resize handle
                 ctx.fillStyle = 'rgba(59, 130, 246, 1)';
                 ctx.fillRect(
                     obj.x + obj.width - HANDLE_SIZE / 2,
@@ -329,21 +366,25 @@
             ctx.strokeStyle = 'rgba(156, 163, 175, 0.5)';
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]);
+            
             const w = canvas.width;
             const h = canvas.height;
-            const lines = [0.25, 0.5, 0.75];
+            const lines = [0.25, 0.5, 0.75]; // 4x4 grid indicators
+            
             lines.forEach(line => {
                 ctx.beginPath();
                 ctx.moveTo(w * line, 0);
                 ctx.lineTo(w * line, h);
                 ctx.stroke();
             });
+            
             lines.forEach(line => {
                 ctx.beginPath();
                 ctx.moveTo(0, h * line);
                 ctx.lineTo(w, h * line);
                 ctx.stroke();
             });
+            
             ctx.restore();
         }
         
@@ -367,7 +408,8 @@
                     const img = new Image();
                     img.onload = function() {
                         const aspectRatio = img.naturalWidth / img.naturalHeight;
-                        const initialWidth = canvas.width / 4;
+                        const initialWidth = canvas.width / 4; // Default size
+                        
                         const newImage = {
                             type: 'image',
                             id: Date.now() + Math.random(),
@@ -380,7 +422,7 @@
                             baseWidth: initialWidth,
                             originalBaseWidth: initialWidth,
                         };
-                        sceneObjects.unshift(newImage);
+                        sceneObjects.unshift(newImage); // Add to front (renders on top)
                         if (isArrangeModeOn) snapAllImagesToGrid();
                         draw();
                     };
@@ -394,9 +436,13 @@
         // --- Mouse and Keyboard Event Handlers ---
         function getMousePos(canvas, evt) {
             const rect = canvas.getBoundingClientRect();
+            // Handle touch events or mouse events
+            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+            
             return {
-                x: (evt.clientX - rect.left) * (canvas.width / rect.width),
-                y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+                x: (clientX - rect.left) * (canvas.width / rect.width),
+                y: (clientY - rect.top) * (canvas.height / rect.height)
             };
         }
 
@@ -411,11 +457,19 @@
             return (pos.x >= handleX && pos.x <= handleX + HANDLE_SIZE * 2 && pos.y >= handleY && pos.y <= handleY + HANDLE_SIZE * 2);
         }
 
-        canvas.addEventListener('mousedown', function(e) {
+        // Mouse Down / Touch Start
+        function handleStart(e) {
+            if(e.touches) {
+               // Prevent default to stop scrolling, but might block clicking buttons if not careful
+               // Since this is on canvas, it's fine.
+               if(e.target === canvas) e.preventDefault();
+            }
+
             const pos = getMousePos(canvas, e);
             startX = pos.x;
             startY = pos.y;
             
+            // Check for handle resize first
             if (!isArrangeModeOn && selectedObject && isOverHandle(pos, selectedObject)) {
                 isResizing = true;
                 isDragging = false;
@@ -426,6 +480,10 @@
             let clickedObject = null;
             let clickedObjectIndex = -1;
 
+            // Check hit test (iterate forwards to find top-most object)
+            // Since we draw reverse loop (last index = 0 is top), we search forwards?
+            // Actually, if we draw `sceneObjects[0]` last, it's on top.
+            // So we should search from 0 to length.
             for (let i = 0; i < sceneObjects.length; i++) {
                 if (isOverObject(pos, sceneObjects[i])) {
                     clickedObject = sceneObjects[i];
@@ -449,16 +507,20 @@
             } else {
                 selectedObject = clickedObject;
                 isDragging = true;
+                // Move to front (index 0)
                 if (clickedObjectIndex > 0) {
                     const [item] = sceneObjects.splice(clickedObjectIndex, 1);
                     sceneObjects.unshift(item);
                 }
             }
             draw();
-        });
+        }
 
-        canvas.addEventListener('mousemove', function(e) {
+        // Mouse Move / Touch Move
+        function handleMove(e) {
             if (!isDragging && !isResizing) return;
+            if(e.touches) e.preventDefault(); 
+
             const pos = getMousePos(canvas, e);
             const dx = pos.x - startX;
             const dy = pos.y - startY;
@@ -474,12 +536,20 @@
                             const oldWidth = selectedObject.width;
                             const oldHeight = selectedObject.height;
                             const newHeight = newWidth / selectedObject.aspectRatio;
+                            
+                            // Adjust position to keep top-left vaguely consistent or center? 
+                            // Standard resize usually moves bottom-right.
+                            // But logic here was centering:
+                            // selectedObject.x -= (newWidth - oldWidth) / 2;
+                            // selectedObject.y -= (newHeight - oldHeight) / 2;
+                            // Let's keep the user's previous logic of center-based resizing
                             selectedObject.x -= (newWidth - oldWidth) / 2;
                             selectedObject.y -= (newHeight - oldHeight) / 2;
+
                             selectedObject.width = newWidth;
                             selectedObject.height = newHeight;
                             selectedObject.baseWidth = newWidth;
-                            sizeSlider.value = 100;
+                            sizeSlider.value = 100; // Reset slider visual since we manually sized
                         }
                     }
                 } else if (isDragging) {
@@ -491,17 +561,24 @@
             startX = pos.x;
             startY = pos.y;
             draw();
-        });
+        }
 
-        canvas.addEventListener('mouseup', function(e) {
+        // Mouse Up / Touch End
+        function handleEnd(e) {
             if (isArrangeModeOn && draggedObject) {
-                const pos = getMousePos(canvas, e);
+                // Determine drop target for swapping
+                // Need current mouse pos, but touchend doesn't have clientX.
+                // Use last known pos (startX, startY)
+                const pos = { x: startX, y: startY };
+                
                 const imageObjects = sceneObjects.filter(obj => obj.type === 'image');
                 const dropIndex = getCellIndexFromPos(pos);
                 
                 if (dropIndex > -1 && dragStartIndex > -1 && dragStartIndex !== dropIndex) {
+                    // Swap logic
                     const draggedId = draggedObject.id;
                     const originalIndexA = sceneObjects.findIndex(o => o.id === draggedId);
+                    
                     const targetId = imageObjects[dropIndex].id;
                     const originalIndexB = sceneObjects.findIndex(o => o.id === targetId);
 
@@ -515,12 +592,20 @@
             draggedObject = null;
             dragStartIndex = -1;
             draw();
-        });
+        }
+
+        // Listeners
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchstart', handleStart, {passive: false});
+        canvas.addEventListener('touchmove', handleMove, {passive: false});
+        canvas.addEventListener('touchend', handleEnd);
 
         function handleKeyDown(e) {
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 if (selectedObject && !isArrangeModeOn) {
-                    e.preventDefault();
+                    e.preventDefault(); // Prevent browser back
                     sceneObjects = sceneObjects.filter(obj => obj.id !== selectedObject.id);
                     selectedObject = null;
                     if (isArrangeModeOn) snapAllImagesToGrid();
@@ -537,6 +622,7 @@
             arrangeModeToggle.classList.toggle('bg-blue-600', isArrangeModeOn);
             arrangeModeToggle.classList.toggle('bg-gray-200', !isArrangeModeOn);
             innerCircle.style.transform = isArrangeModeOn ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
+            
             if (isArrangeModeOn) {
                 snapAllImagesToGrid();
             }
@@ -656,9 +742,14 @@
             generateBgBtn.disabled = true;
 
             try {
-                const apiKey = "AIzaSyDmJpJ-IgCtfa-Jm-jt3UTCftqfDqsdGS4";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+                // Use empty string to let the environment inject the key
+                const apiKey = ""; 
+                // Updated to use imagen-4.0-generate-001
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+                const payload = { 
+                    instances: [{ prompt: prompt }], 
+                    parameters: { "sampleCount": 1 } 
+                };
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -679,6 +770,9 @@
                         backgroundColor = 'transparent';
                         draw();
                     };
+                    img.onerror = () => {
+                        throw new Error('Failed to load generated image.');
+                    }
                     img.src = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
                 } else {
                     throw new Error('No image data received from API.');
@@ -694,21 +788,54 @@
         
         // --- Initialization ---
         imageLoader.addEventListener('change', handleImageUpload);
-        downloadBtn.addEventListener('click', () => { selectedObject = null; draggedObject = null; draw(true); const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href = url; a.download = 'composition.png'; a.click(); draw(); });
-        ratio1to1Btn.addEventListener('click', () => { currentAspectRatio = '1:1'; ratio1to1Btn.classList.add('active-ratio'); ratio4to5Btn.classList.remove('active-ratio'); setCanvasSize(); });
-        ratio4to5Btn.addEventListener('click', () => { currentAspectRatio = '4:5'; ratio4to5Btn.classList.add('active-ratio'); ratio1to1Btn.classList.remove('active-ratio'); setCanvasSize(); });
-        gridToggle.addEventListener('click', () => { isGridVisible = !isGridVisible; const c = gridToggle.querySelector('span'); gridToggle.classList.toggle('bg-blue-600', isGridVisible); gridToggle.classList.toggle('bg-gray-200', !isGridVisible); c.style.transform = isGridVisible ? 'translateX(1.25rem)' : 'translateX(0.25rem)'; draw(); });
+        
+        downloadBtn.addEventListener('click', () => { 
+            selectedObject = null; 
+            draggedObject = null; 
+            draw(true); // Draw without grid lines or helpers
+            const url = canvas.toDataURL('image/png'); 
+            const a = document.createElement('a'); 
+            a.href = url; 
+            a.download = 'composition.png'; 
+            a.click(); 
+            draw(); 
+        });
+
+        ratio1to1Btn.addEventListener('click', () => { 
+            currentAspectRatio = '1:1'; 
+            ratio1to1Btn.classList.add('active-ratio'); 
+            ratio4to5Btn.classList.remove('active-ratio'); 
+            setCanvasSize(); 
+        });
+
+        ratio4to5Btn.addEventListener('click', () => { 
+            currentAspectRatio = '4:5'; 
+            ratio4to5Btn.classList.add('active-ratio'); 
+            ratio1to1Btn.classList.remove('active-ratio'); 
+            setCanvasSize(); 
+        });
+
+        gridToggle.addEventListener('click', () => { 
+            isGridVisible = !isGridVisible; 
+            const c = gridToggle.querySelector('span'); 
+            gridToggle.classList.toggle('bg-blue-600', isGridVisible); 
+            gridToggle.classList.toggle('bg-gray-200', !isGridVisible); 
+            c.style.transform = isGridVisible ? 'translateX(1.25rem)' : 'translateX(0.25rem)'; 
+            draw(); 
+        });
+
         arrangeModeToggle.addEventListener('click', toggleArrangeMode);
         sizeSlider.addEventListener('input', handleGlobalSizeChange);
         resetSizeBtn.addEventListener('click', resetAllSizes);
         clearAllBtn.addEventListener('click', clearAll);
         addTextBtn.addEventListener('click', addText);
         generateBgBtn.addEventListener('click', generateBackground);
+        
         bgPrompt.addEventListener('focus', () => { selectedObject = null; draw(); });
+        
         window.addEventListener('keydown', handleKeyDown);
         
         setCanvasSize();
     </script>
-
 </body>
 </html>
