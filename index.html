@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funko Image & Details Extractor (Cache Re-check)</title>
+    <title>Funko Image & Details Extractor (Proxy Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -200,7 +200,7 @@
                 <h1 id="mainHeader" class="text-4xl font-bold text-gray-800 transition-colors duration-300">Funko Image & Details Extractor</h1>
                 <p id="subHeader" class="text-gray-600 mt-2 text-lg transition-colors duration-300">
                     Enter Funko Product IDs (PIDs) to fetch content via
-                    <code class="bg-blue-100 text-blue-700 px-1 py-0.5 rounded text-sm">corsproxy.io</code>
+                    <code class="bg-blue-100 text-blue-700 px-1 py-0.5 rounded text-sm">AllOrigins</code>
                     and extract product images & details. Data is cached in Google Sheets.
                 </p>
             </header>
@@ -222,8 +222,8 @@
                     Clear Funko Results
                 </button>
                  <button id="clearCacheButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300 ease-in-out text-sm flex items-center justify-center">
-                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15zM21 3l-6 6m0-6l6 6"></path></svg>
-                     Clear Sheet Cache (PIDs in Textarea)
+                      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15zM21 3l-6 6m0-6l6 6"></path></svg>
+                      Clear Sheet Cache (PIDs in Textarea)
                 </button>
                 <button id="darkModeToggle" title="Switch to Dark Mode" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-bold p-2 rounded-full shadow-md hover:shadow-lg transform hover:scale-110 transition duration-300 ease-in-out text-sm flex items-center justify-center">
                     <svg id="darkModeIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
@@ -240,7 +240,7 @@
         </div>
 
         <footer class="text-center text-gray-500 mt-10 text-sm">
-            <p>Using corsproxy.io for data fetching. API Key is hardcoded.</p>
+            <p>Using api.allorigins.win for data fetching.</p>
         </footer>
     </div>
 
@@ -399,8 +399,17 @@
 
         const FUNKO_TARGET_URL_BASE = 'https://funko.com/on/demandware.store/Sites-FunkoUS-Site/en_US/Wishlist-GetProduct?pid=';
         const FUNKO_IMAGE_BASE_URL = 'https://funko.com/dw/image/v2/BGTS_PRD/';
-        const CORS_PROXY_API_KEY = 'eb06c81a'; 
-        const CORS_PROXY_BASE_URL = 'https://corsproxy.io/';
+        
+        // --- PROXY CONFIGURATION ---
+        // Option 1: AllOrigins (Free, typically very stable)
+        const CORS_PROXY_BASE_URL = 'https://api.allorigins.win/raw';
+        
+        // Option 2: ThingProxy (Fallback if AllOrigins fails)
+        // const CORS_PROXY_BASE_URL = 'https://thingproxy.freeboard.io/fetch/';
+        
+        // Option 3: CorsProxy.io (Deprecated for free usage, requires key for paid)
+        // const CORS_PROXY_BASE_URL = 'https://corsproxy.io/';
+        // const CORS_PROXY_API_KEY = 'eb06c81a'; 
 
         const emptyStateHTML = `
             <div id="emptyStateResults" class="text-center p-10 border-2 border-dashed border-gray-300 rounded-lg opacity-0 transition-opacity duration-500 ease-out">
@@ -565,12 +574,11 @@
             button.innerHTML = `Re-checking... <div class="loader"></div>`;
 
             const targetUrl = `${FUNKO_TARGET_URL_BASE}${pid}`;
-            // UPDATED: Corrected proxy URL format based on documentation
+            // UPDATED: Use the new proxy structure
             const proxyFetchUrl = `${CORS_PROXY_BASE_URL}?url=${encodeURIComponent(targetUrl)}`;
             
             let extractionResult;
             try {
-                // UPDATED: Removed incorrect 'X-Cors-Api-Key' header
                 const response = await fetch(proxyFetchUrl);
                 if (!response.ok) {
                     let errorText = await response.text();
@@ -734,10 +742,9 @@
                 } else {
                     pidStatusDiv.innerHTML = `<p class="text-blue-600">Not in cache. Fetching data for PID ${pid} via proxy...</p>`;
                     const targetUrl = `${FUNKO_TARGET_URL_BASE}${pid}`;
-                    // UPDATED: Corrected proxy URL format based on documentation
+                    // UPDATED: Use the new proxy structure
                     const proxyFetchUrl = `${CORS_PROXY_BASE_URL}?url=${encodeURIComponent(targetUrl)}`;
                     try {
-                        // UPDATED: Removed incorrect 'X-Cors-Api-Key' header
                         const response = await fetch(proxyFetchUrl);
                         if (!response.ok) {
                             let errorText = await response.text();
@@ -897,7 +904,7 @@
                         }
 
                         if (!processedKnownPath) {
-                              for (const key in obj) {
+                             for (const key in obj) {
                                 if (obj.hasOwnProperty(key)) {
                                     findUrlsRecursively(obj[key]);
                                 }
@@ -952,9 +959,9 @@
                 // Avoid repeating the JSON parse error note if it was already added
                 const currentHTML = pidStatusDiv.innerHTML;
                 if (currentHTML.includes("Note: Response was not valid JSON")) {
-                     pidStatusDiv.innerHTML = `<p class="${foundUrls.size > 0 || productName || longDescription || formattedPrice ? 'text-green-600' : 'text-yellow-600'} font-medium">${statusText}</p>` + currentHTML.substring(currentHTML.indexOf("<p class=\"text-xs text-yellow-700 mt-1\">"));
+                      pidStatusDiv.innerHTML = `<p class="${foundUrls.size > 0 || productName || longDescription || formattedPrice ? 'text-green-600' : 'text-yellow-600'} font-medium">${statusText}</p>` + currentHTML.substring(currentHTML.indexOf("<p class=\"text-xs text-yellow-700 mt-1\">"));
                 } else {
-                     pidStatusDiv.innerHTML = `<p class="${foundUrls.size > 0 || productName || longDescription || formattedPrice ? 'text-green-600' : 'text-yellow-600'} font-medium">${statusText}</p>`;
+                      pidStatusDiv.innerHTML = `<p class="${foundUrls.size > 0 || productName || longDescription || formattedPrice ? 'text-green-600' : 'text-yellow-600'} font-medium">${statusText}</p>`;
                 }
             }
             
