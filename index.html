@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funko Image & Details Extractor (Proxy Fix)</title>
+    <title>Funko Image & Details Extractor (CorsProxy.io)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -200,7 +200,7 @@
                 <h1 id="mainHeader" class="text-4xl font-bold text-gray-800 transition-colors duration-300">Funko Image & Details Extractor</h1>
                 <p id="subHeader" class="text-gray-600 mt-2 text-lg transition-colors duration-300">
                     Enter Funko Product IDs (PIDs) to fetch content via
-                    <code class="bg-blue-100 text-blue-700 px-1 py-0.5 rounded text-sm">AllOrigins</code>
+                    <code class="bg-blue-100 text-blue-700 px-1 py-0.5 rounded text-sm">corsproxy.io</code>
                     and extract product images & details. Data is cached in Google Sheets.
                 </p>
             </header>
@@ -240,7 +240,7 @@
         </div>
 
         <footer class="text-center text-gray-500 mt-10 text-sm">
-            <p>Using api.allorigins.win for data fetching.</p>
+            <p>Using corsproxy.io (Paid) for data fetching.</p>
         </footer>
     </div>
 
@@ -402,14 +402,14 @@
         
         // --- PROXY CONFIGURATION ---
         // Option 1: AllOrigins (Free, typically very stable)
-        const CORS_PROXY_BASE_URL = 'https://api.allorigins.win/raw';
+        // const CORS_PROXY_BASE_URL = 'https://api.allorigins.win/raw';
         
         // Option 2: ThingProxy (Fallback if AllOrigins fails)
         // const CORS_PROXY_BASE_URL = 'https://thingproxy.freeboard.io/fetch/';
         
-        // Option 3: CorsProxy.io (Deprecated for free usage, requires key for paid)
-        // const CORS_PROXY_BASE_URL = 'https://corsproxy.io/';
-        // const CORS_PROXY_API_KEY = 'eb06c81a'; 
+        // Option 3: CorsProxy.io (Paid Subscription)
+        const CORS_PROXY_BASE_URL = 'https://corsproxy.io/';
+        const CORS_PROXY_API_KEY = 'eb06c81a'; 
 
         const emptyStateHTML = `
             <div id="emptyStateResults" class="text-center p-10 border-2 border-dashed border-gray-300 rounded-lg opacity-0 transition-opacity duration-500 ease-out">
@@ -574,8 +574,14 @@
             button.innerHTML = `Re-checking... <div class="loader"></div>`;
 
             const targetUrl = `${FUNKO_TARGET_URL_BASE}${pid}`;
-            // UPDATED: Use the new proxy structure
-            const proxyFetchUrl = `${CORS_PROXY_BASE_URL}?url=${encodeURIComponent(targetUrl)}`;
+            // UPDATED: Use the new proxy structure with key
+            let proxyFetchUrl;
+            if (CORS_PROXY_BASE_URL.includes('corsproxy.io') && CORS_PROXY_API_KEY) {
+                proxyFetchUrl = `${CORS_PROXY_BASE_URL}?key=${CORS_PROXY_API_KEY}&url=${encodeURIComponent(targetUrl)}`;
+            } else {
+                 // Fallback for AllOrigins or generic
+                proxyFetchUrl = `${CORS_PROXY_BASE_URL}?url=${encodeURIComponent(targetUrl)}`;
+            }
             
             let extractionResult;
             try {
@@ -742,8 +748,15 @@
                 } else {
                     pidStatusDiv.innerHTML = `<p class="text-blue-600">Not in cache. Fetching data for PID ${pid} via proxy...</p>`;
                     const targetUrl = `${FUNKO_TARGET_URL_BASE}${pid}`;
-                    // UPDATED: Use the new proxy structure
-                    const proxyFetchUrl = `${CORS_PROXY_BASE_URL}?url=${encodeURIComponent(targetUrl)}`;
+                    // UPDATED: Use the new proxy structure with key
+                    let proxyFetchUrl;
+                    if (CORS_PROXY_BASE_URL.includes('corsproxy.io') && CORS_PROXY_API_KEY) {
+                        proxyFetchUrl = `${CORS_PROXY_BASE_URL}?key=${CORS_PROXY_API_KEY}&url=${encodeURIComponent(targetUrl)}`;
+                    } else {
+                         // Fallback
+                        proxyFetchUrl = `${CORS_PROXY_BASE_URL}?url=${encodeURIComponent(targetUrl)}`;
+                    }
+
                     try {
                         const response = await fetch(proxyFetchUrl);
                         if (!response.ok) {
