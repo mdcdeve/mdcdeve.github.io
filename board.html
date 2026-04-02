@@ -1,545 +1,480 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Image as ImageIcon, Download, Settings, Type, Maximize, List, ArrowUp, ArrowDown } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas for downloading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Custom dot pattern for the background */
+        .bg-pattern {
+            background-color: #e5e7eb;
+            background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans bg-gray-100 flex flex-col md:flex-row">
 
-export default function App() {
-  // Dynamically load html2canvas for the download feature
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    document.head.appendChild(script);
-  }, []);
-
-  // Application State
-  const [handle, setHandle] = useState('@FunkoPOPNews');
-  const [mainTitle, setMainTitle] = useState('Next Week');
-  const [footer, setFooter] = useState('FUNKO POP! COLLECTIBLES');
-  
-  // Canvas Settings State
-  const [canvasWidth, setCanvasWidth] = useState(1080);
-  const [canvasHeight, setCanvasHeight] = useState(1080);
-  const [zoom, setZoom] = useState(50); // 50% scale for previewing
-  
-  const [headerTextScale, setHeaderTextScale] = useState(100);
-  const [innerTextScale, setInnerTextScale] = useState(100);
-  
-  const [sections, setSections] = useState([
-    {
-      id: 1,
-      title: "STRANGER THINGS: TALES FROM '85",
-      color: "#328294",
-      image: "",
-      items: ["8 NEW POPS ANNOUNCED"]
-    },
-    {
-      id: 2,
-      title: "BATMAN BEYOND: RETURN OF THE JOKER",
-      color: "#b92b27",
-      image: "",
-      items: ["BATMAN W/ ACE, JOKER W/ GUN,", "DEE DEE 2-PACK"]
-    },
-    {
-      id: 3,
-      title: "LORD OF THE RINGS",
-      color: "#d4af37",
-      image: "",
-      items: ["GIMLI SAYINGS"]
-    },
-    {
-      id: 4,
-      title: "WICKED × CARE BEARS",
-      color: "#4ade80",
-      image: "",
-      items: [
-        "Good Luck Bear as Elphaba",
-        "Love-a-Lot Bear as Glinda",
-        "Funshine Bear as Scarecrow",
-        "Grumpy Bear as Tin Man",
-        "Tenderheart Bear as Cowardly Lion"
-      ]
-    },
-    {
-      id: 5,
-      title: "PEACEMAKER",
-      color: "#6b7280",
-      image: "",
-      items: ["DOPPELGANGER PEACEMAKER"]
-    },
-    {
-      id: 6,
-      title: "THE DEVIL WEARS PRADA 2",
-      color: "#db2777",
-      image: "",
-      items: ["ANDY, EMILY, MIRANDA"]
-    }
-  ]);
-
-  const previewRef = useRef(null);
-
-  // --- Handlers ---
-
-  const handleAddSection = () => {
-    const newId = sections.length > 0 ? Math.max(...sections.map(s => s.id)) + 1 : 1;
-    setSections([...sections, { id: newId, title: "NEW SECTION", color: "#3b82f6", image: "", items: ["New Item"] }]);
-  };
-
-  const handleRemoveSection = (id) => {
-    setSections(sections.filter(s => s.id !== id));
-  };
-
-  const updateSection = (id, field, value) => {
-    setSections(sections.map(sec => sec.id === id ? { ...sec, [field]: value } : sec));
-  };
-
-  const moveSection = (index, direction) => {
-    const newSections = [...sections];
-    if (direction === 'up' && index > 0) {
-      [newSections[index - 1], newSections[index]] = [newSections[index], newSections[index - 1]];
-    } else if (direction === 'down' && index < newSections.length - 1) {
-      [newSections[index + 1], newSections[index]] = [newSections[index], newSections[index + 1]];
-    }
-    setSections(newSections);
-  };
-
-  const handleAddItem = (sectionId) => {
-    setSections(sections.map(sec => {
-      if (sec.id === sectionId) {
-        return { ...sec, items: [...sec.items, "New Item"] };
-      }
-      return sec;
-    }));
-  };
-
-  const handleUpdateItem = (sectionId, itemIndex, value) => {
-    setSections(sections.map(sec => {
-      if (sec.id === sectionId) {
-        const newItems = [...sec.items];
-        newItems[itemIndex] = value;
-        return { ...sec, items: newItems };
-      }
-      return sec;
-    }));
-  };
-
-  const handleRemoveItem = (sectionId, itemIndex) => {
-    setSections(sections.map(sec => {
-      if (sec.id === sectionId) {
-        const newItems = sec.items.filter((_, idx) => idx !== itemIndex);
-        return { ...sec, items: newItems };
-      }
-      return sec;
-    }));
-  };
-
-  const handleImageUpload = (e, sectionId) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateSection(sectionId, 'image', reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const downloadImage = async () => {
-    if (!window.html2canvas) {
-      alert("Please wait a moment for the image generator tool to load, then try again.");
-      return;
-    }
-    
-    const element = previewRef.current;
-    
-    // Temporarily un-scale the element to capture the true requested resolution
-    const originalTransform = element.style.transform;
-    element.style.transform = 'none';
-    
-    try {
-      const canvas = await window.html2canvas(element, {
-        scale: 1, // Will export exactly at the canvasWidth x canvasHeight defined
-        backgroundColor: "#fcfbf6",
-        logging: false,
-        useCORS: true
-      });
-      
-      const image = canvas.toDataURL("image/png");
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `Infographic-${canvasWidth}x${canvasHeight}.png`;
-      link.click();
-    } catch (error) {
-      console.error("Error generating image:", error);
-      alert("There was an issue generating the image. Please try again.");
-    } finally {
-      // Restore the preview zoom scale
-      element.style.transform = originalTransform;
-    }
-  };
-
-  // Base text scaling relative to the width (16px base at 1080px width)
-  const baseFontSize = (canvasWidth / 1080) * 16;
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row font-sans">
-      
-      {/* LEFT PANEL - EDITOR */}
-      <div className="w-full md:w-5/12 lg:w-1/3 bg-white border-r border-gray-200 h-screen overflow-y-auto p-6 shadow-xl z-10 flex flex-col relative">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 sticky top-0 bg-white z-20">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-gray-900">Graphic Maker</h1>
-            <p className="text-sm text-gray-500">Create custom drop lists</p>
-          </div>
-          <button 
-            onClick={downloadImage}
-            className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
-          >
-            <Download size={18} />
-            <span>Save</span>
-          </button>
+    <!-- LEFT PANEL - EDITOR -->
+    <div class="w-full md:w-5/12 lg:w-1/3 bg-white border-r border-gray-200 h-screen overflow-y-auto p-6 shadow-xl z-10 flex flex-col relative">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 sticky top-0 bg-white z-20">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-gray-900">Graphic Maker</h1>
+                <p class="text-sm text-gray-500">Pure HTML/JS Version</p>
+            </div>
+            <button onclick="downloadImage()" class="flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <span>Save</span>
+            </button>
         </div>
 
-        {/* Global Settings */}
-        <div className="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Settings size={14}/> Canvas & Text Settings</h2>
-          
-          <div className="grid grid-cols-2 gap-3 mb-2">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Canvas Width (px)</label>
-              <input 
-                type="number" 
-                value={canvasWidth} 
-                onChange={(e) => setCanvasWidth(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Canvas Height (px)</label>
-              <input 
-                type="number" 
-                value={canvasHeight} 
-                onChange={(e) => setCanvasHeight(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="mb-4 pb-4 border-b border-gray-200">
-            <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
-              <span className="flex items-center gap-1"><Maximize size={12}/> Preview Zoom</span>
-              <span>{zoom}%</span>
-            </label>
-            <input 
-              type="range" 
-              min="10" 
-              max="150" 
-              value={zoom} 
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full accent-blue-600"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-gray-200">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
-                <span>Header Size</span>
-                <span>{headerTextScale}%</span>
-              </label>
-              <input 
-                type="range" 
-                min="50" 
-                max="200" 
-                value={headerTextScale} 
-                onChange={(e) => setHeaderTextScale(Number(e.target.value))}
-                className="w-full accent-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
-                <span>Inner Text Size</span>
-                <span>{innerTextScale}%</span>
-              </label>
-              <input 
-                type="range" 
-                min="50" 
-                max="200" 
-                value={innerTextScale} 
-                onChange={(e) => setInnerTextScale(Number(e.target.value))}
-                className="w-full accent-blue-600"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Handle / Top Text</label>
-            <input 
-              type="text" 
-              value={handle} 
-              onChange={(e) => setHandle(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Main Heading</label>
-            <input 
-              type="text" 
-              value={mainTitle} 
-              onChange={(e) => setMainTitle(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Footer Text</label>
-            <input 
-              type="text" 
-              value={footer} 
-              onChange={(e) => setFooter(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Reorder Sections Block */}
-        {sections.length > 0 && (
-          <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-              <List size={14}/> Reorder Sections
+        <!-- Global Settings -->
+        <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Canvas & Text Settings
             </h2>
-            <div className="flex flex-col gap-2">
-              {sections.map((sec, idx) => (
-                <div key={sec.id} className="flex items-center justify-between bg-white p-2 border border-gray-200 rounded-lg text-sm shadow-sm">
-                  <span className="font-semibold text-gray-700 truncate pr-2 flex-1">{sec.title || "Untitled Section"}</span>
-                  <div className="flex gap-1">
-                    <button 
-                      disabled={idx === 0} 
-                      onClick={() => moveSection(idx, 'up')} 
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded disabled:opacity-30 transition-colors"
-                      title="Move Up"
-                    >
-                      <ArrowUp size={14}/>
-                    </button>
-                    <button 
-                      disabled={idx === sections.length - 1} 
-                      onClick={() => moveSection(idx, 'down')} 
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded disabled:opacity-30 transition-colors"
-                      title="Move Down"
-                    >
-                      <ArrowDown size={14}/>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Sections Editor */}
-        <div className="flex-1 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Type size={14}/> Content Sections ({sections.length})</h2>
-          </div>
-
-          {sections.map((section, idx) => (
-            <div key={section.id} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm relative group">
-              <button 
-                onClick={() => handleRemoveSection(section.id)}
-                className="absolute -top-3 -right-3 bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white shadow-sm"
-                title="Remove Section"
-              >
-                <Trash2 size={14} />
-              </button>
-
-              <div className="flex gap-3 mb-4">
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Section Title</label>
-                  <input 
-                    type="text" 
-                    value={section.title} 
-                    onChange={(e) => updateSection(section.id, 'title', e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md outline-none text-sm font-bold"
-                  />
+            
+            <div class="grid grid-cols-2 gap-3 mb-2">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Canvas Width (px)</label>
+                    <input type="number" id="global-width" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Color</label>
-                  <input 
-                    type="color" 
-                    value={section.color} 
-                    onChange={(e) => updateSection(section.id, 'color', e.target.value)}
-                    className="h-9 w-12 p-0.5 border border-gray-300 rounded-md cursor-pointer"
-                  />
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Canvas Height (px)</label>
+                    <input type="number" id="global-height" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono" />
                 </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Logo/Icon Image (Optional)</label>
-                <div className="flex items-center gap-3">
-                  {section.image && (
-                     <img src={section.image} alt="preview" className="h-10 w-10 object-contain bg-gray-50 border rounded" />
-                  )}
-                  <label className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-md p-2 hover:bg-gray-50 cursor-pointer transition-colors">
-                    <ImageIcon size={16} className="text-gray-400"/>
-                    <span className="text-xs text-gray-500 font-medium">{section.image ? 'Change Image' : 'Upload Image'}</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => handleImageUpload(e, section.id)}
-                      className="hidden"
-                    />
-                  </label>
-                  {section.image && (
-                     <button onClick={() => updateSection(section.id, 'image', '')} className="text-xs text-red-500 hover:underline">Remove</button>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-2">Content Lines</label>
-                <div className="space-y-2 mb-2">
-                  {section.items.map((item, itemIdx) => (
-                    <div key={itemIdx} className="flex gap-2 items-center">
-                      <input 
-                        type="text" 
-                        value={item} 
-                        onChange={(e) => handleUpdateItem(section.id, itemIdx, e.target.value)}
-                        className="flex-1 p-1.5 border border-gray-200 rounded text-sm outline-none focus:border-blue-400 bg-gray-50 focus:bg-white"
-                        placeholder="e.g. 8 NEW POPS ANNOUNCED"
-                      />
-                      <button 
-                        onClick={() => handleRemoveItem(section.id, itemIdx)}
-                        className="text-gray-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button 
-                  onClick={() => handleAddItem(section.id)}
-                  className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold"
-                >
-                  <Plus size={12} /> Add Line
-                </button>
-              </div>
             </div>
-          ))}
 
-          <button 
-            onClick={handleAddSection}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-800 hover:border-gray-800 hover:bg-gray-50 font-bold flex items-center justify-center gap-2 transition-all mb-8"
-          >
-            <Plus size={18} /> ADD NEW SECTION
-          </button>
+            <div class="mb-4 pb-4 border-b border-gray-200">
+                <label class="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+                    <span class="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                        Preview Zoom
+                    </span>
+                    <span id="zoom-display">50%</span>
+                </label>
+                <input type="range" id="global-zoom" min="10" max="150" class="w-full accent-blue-600" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-gray-200">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+                        <span>Header Size</span>
+                        <span id="header-scale-display">100%</span>
+                    </label>
+                    <input type="range" id="global-header-scale" min="50" max="200" class="w-full accent-blue-600" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+                        <span>Inner Text Size</span>
+                        <span id="inner-scale-display">100%</span>
+                    </label>
+                    <input type="range" id="global-inner-scale" min="50" max="200" class="w-full accent-blue-600" />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Handle / Top Text</label>
+                <input type="text" id="global-handle" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Main Heading</label>
+                <input type="text" id="global-title" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Footer Text</label>
+                <input type="text" id="global-footer" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+            </div>
         </div>
-      </div>
 
+        <!-- Reorder Sections Block -->
+        <div id="reorder-container"></div>
 
-      {/* RIGHT PANEL - PREVIEW AREA */}
-      <div className="flex-1 flex flex-col items-center justify-center overflow-hidden bg-gray-200 pattern-isometric pattern-gray-300 pattern-bg-gray-200 pattern-size-4 pattern-opacity-20 relative">
+        <!-- Sections Editor Block -->
+        <div class="flex items-center justify-between mb-4 mt-2">
+            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                Content Sections (<span id="section-count"></span>)
+            </h2>
+        </div>
         
-        {/* Zoomable Viewport Wrapper */}
-        <div className="w-full h-full overflow-auto flex items-center justify-center p-8">
-          
-          <div 
-            className="relative flex-shrink-0 shadow-2xl transition-transform duration-200 ease-out"
-            style={{ 
-              width: canvasWidth * (zoom / 100), 
-              height: canvasHeight * (zoom / 100) 
-            }}
-          >
-            
-            {/* The Actual Scalable Canvas */}
-            <div 
-              ref={previewRef}
-              className="bg-[#fcfbf6] absolute top-0 left-0 flex flex-col box-border"
-              style={{ 
-                 width: `${canvasWidth}px`, 
-                 height: `${canvasHeight}px`,
-                 transform: `scale(${zoom / 100})`,
-                 transformOrigin: 'top left',
-                 fontSize: `${baseFontSize}px`, // This makes all em units perfectly scale!
-                 padding: '2.5em',
-                 fontFamily: "'Inter', 'Helvetica Neue', sans-serif" 
-              }}
-            >
-              {/* Header Area */}
-              <div className="text-center flex flex-col items-center" style={{ marginBottom: '2em' }}>
-                <h3 className="font-bold tracking-tight text-gray-800" style={{ fontSize: `${1.5 * (headerTextScale / 100)}em` }}>
-                  {handle}
-                </h3>
-                {/* Removed uppercase class below so it respects user input case */}
-                <h1 className="font-black tracking-tighter text-black leading-none mt-1" style={{ fontSize: `${4.5 * (headerTextScale / 100)}em` }}>
-                  {mainTitle}
-                </h1>
-              </div>
-
-              {/* Grid Area - Uses Flex to stretch inside the remaining space */}
-              <div 
-                className={`flex-1 grid ${sections.length === 1 ? 'grid-cols-1 w-full' : 'grid-cols-2'}`}
-                style={{ gap: '1.5em', maxWidth: sections.length === 1 ? '50%' : '100%', margin: sections.length === 1 ? '0 auto' : '0' }}
-              >
-                {sections.map((section) => (
-                  <div 
-                    key={section.id} 
-                    className="bg-white flex flex-col overflow-hidden h-full shadow-[0_4px_0_0_rgba(0,0,0,0.1)] rounded-[1em]"
-                    style={{ border: '0.25em solid #2c3e50' }}
-                  >
-                    {/* Section Title Header */}
-                    <div 
-                      className="text-center"
-                      style={{ backgroundColor: section.color, padding: '0.5em 0.75em', borderBottom: '0.25em solid #2c3e50' }}
-                    >
-                      <h2 className="text-white font-extrabold uppercase leading-tight drop-shadow-sm tracking-wide" style={{ fontSize: `${1.1 * (headerTextScale / 100)}em` }}>
-                        {section.title}
-                      </h2>
-                    </div>
-                    
-                    {/* Section Content */}
-                    <div className="flex-1 flex flex-col items-center justify-center text-center" style={{ padding: '1.5em' }}>
-                      
-                      {/* Image Area - Completely hidden if no image is present */}
-                      {section.image && (
-                        <div className="flex-1 flex items-center justify-center w-full" style={{ minHeight: '5em', marginBottom: '1em' }}>
-                          <img 
-                            src={section.image} 
-                            alt={section.title} 
-                            className="object-contain"
-                            style={{ maxHeight: '7em' }}
-                          />
-                        </div>
-                      )}
-                      
-                      {/* Items List */}
-                      <div className="w-full flex flex-col justify-center">
-                        {section.items.map((item, idx) => (
-                          <p 
-                            key={idx} 
-                            className="font-bold text-gray-900 leading-snug tracking-tight"
-                            style={{ fontSize: `${1.1 * (innerTextScale / 100)}em`, margin: '0.15em 0' }}
-                          >
-                            {section.items.length > 2 && idx === 0 && item.includes(' as ') ? (
-                               <span className="flex items-center justify-center gap-2">
-                                  <span className="rounded-full bg-gray-400 inline-block" style={{ width: '0.3em', height: '0.3em' }}></span>
-                                  {item}
-                               </span>
-                            ) : item}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Footer */}
-              <div className="text-center" style={{ marginTop: '2em' }}>
-                <p className="font-bold text-gray-500 uppercase tracking-widest" style={{ fontSize: `${0.8 * (innerTextScale / 100)}em` }}>
-                  {footer}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
+        <!-- Editor List mounts here -->
+        <div id="sections-editor" class="space-y-6 mb-8"></div>
+        
+        <button onclick="addSection()" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-800 hover:border-gray-800 hover:bg-gray-50 font-bold flex items-center justify-center gap-2 transition-all mb-8">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            ADD NEW SECTION
+        </button>
     </div>
-  );
-}
+
+    <!-- RIGHT PANEL - PREVIEW AREA -->
+    <div class="flex-1 flex flex-col items-center justify-center overflow-hidden bg-pattern relative">
+        <div class="w-full h-full overflow-auto flex items-center justify-center p-8">
+            <div id="canvas-wrapper" class="relative flex-shrink-0 shadow-2xl transition-transform duration-200 ease-out">
+                <!-- React output mounts here -->
+                <div id="canvas-preview" class="bg-[#fcfbf6] absolute top-0 left-0 flex flex-col box-border font-sans" style="font-family: 'Inter', 'Helvetica Neue', sans-serif;">
+                    <!-- JS renders content here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // 1. App State
+        let state = {
+            handle: '@FunkoPOPNews',
+            mainTitle: 'Next Week',
+            footer: 'FUNKO POP! COLLECTIBLES',
+            canvasWidth: 1080,
+            canvasHeight: 1080,
+            zoom: 50,
+            headerTextScale: 100,
+            innerTextScale: 100,
+            sections: [
+                { id: 1, title: "STRANGER THINGS: TALES FROM '85", color: "#328294", image: "", items: ["8 NEW POPS ANNOUNCED"] },
+                { id: 2, title: "BATMAN BEYOND: RETURN OF THE JOKER", color: "#b92b27", image: "", items: ["BATMAN W/ ACE, JOKER W/ GUN,", "DEE DEE 2-PACK"] },
+                { id: 3, title: "LORD OF THE RINGS", color: "#d4af37", image: "", items: ["GIMLI SAYINGS"] },
+                { id: 4, title: "WICKED × CARE BEARS", color: "#4ade80", image: "", items: ["Good Luck Bear as Elphaba", "Love-a-Lot Bear as Glinda", "Funshine Bear as Scarecrow", "Grumpy Bear as Tin Man", "Tenderheart Bear as Cowardly Lion"] },
+                { id: 5, title: "PEACEMAKER", color: "#6b7280", image: "", items: ["DOPPELGANGER PEACEMAKER"] },
+                { id: 6, title: "THE DEVIL WEARS PRADA 2", color: "#db2777", image: "", items: ["ANDY, EMILY, MIRANDA"] }
+            ]
+        };
+
+        // Utility: Escape HTML strings to prevent breaking inputs
+        function escapeHtml(text) {
+            return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // 2. Initialization and Binding
+        document.addEventListener('DOMContentLoaded', () => {
+            // Bind input values
+            const bindInput = (id, stateKey, isNumber = false, callback = null) => {
+                const el = document.getElementById(id);
+                el.value = state[stateKey];
+                el.addEventListener('input', (e) => {
+                    state[stateKey] = isNumber ? Number(e.target.value) : e.target.value;
+                    if(callback) callback(state[stateKey]);
+                    renderPreview();
+                });
+            };
+
+            bindInput('global-width', 'canvasWidth', true);
+            bindInput('global-height', 'canvasHeight', true);
+            bindInput('global-handle', 'handle');
+            bindInput('global-title', 'mainTitle');
+            bindInput('global-footer', 'footer');
+            
+            bindInput('global-zoom', 'zoom', true, val => document.getElementById('zoom-display').innerText = val + '%');
+            bindInput('global-header-scale', 'headerTextScale', true, val => document.getElementById('header-scale-display').innerText = val + '%');
+            bindInput('global-inner-scale', 'innerTextScale', true, val => document.getElementById('inner-scale-display').innerText = val + '%');
+
+            // Event Delegation for Section Inputs (Avoids focus loss on every keystroke)
+            document.getElementById('sections-editor').addEventListener('input', (e) => {
+                if (e.target.matches('.section-title-input')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const sec = state.sections.find(s => s.id === id);
+                    if(sec) sec.title = e.target.value;
+                    renderReorderList(); // Update reorder list names
+                    renderPreview();
+                }
+                else if (e.target.matches('.section-color-input')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const sec = state.sections.find(s => s.id === id);
+                    if(sec) sec.color = e.target.value;
+                    renderPreview();
+                }
+                else if (e.target.matches('.section-item-input')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const idx = parseInt(e.target.dataset.idx);
+                    const sec = state.sections.find(s => s.id === id);
+                    if(sec && sec.items[idx] !== undefined) {
+                        sec.items[idx] = e.target.value;
+                    }
+                    renderPreview();
+                }
+            });
+
+            // Initial Renders
+            fullRender();
+        });
+
+        function fullRender() {
+            renderReorderList();
+            renderEditorSections();
+            renderPreview();
+        }
+
+        // 3. Render Functions
+        function renderReorderList() {
+            const container = document.getElementById('reorder-container');
+            if(state.sections.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = `
+            <div class="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    Reorder Sections
+                </h2>
+                <div class="flex flex-col gap-2">
+            `;
+
+            state.sections.forEach((sec, idx) => {
+                const upDisabled = idx === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 hover:text-gray-800';
+                const downDisabled = idx === state.sections.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 hover:text-gray-800';
+                
+                html += `
+                <div class="flex items-center justify-between bg-white p-2 border border-gray-200 rounded-lg text-sm shadow-sm">
+                    <span class="font-semibold text-gray-700 truncate pr-2 flex-1">${escapeHtml(sec.title) || "Untitled Section"}</span>
+                    <div class="flex gap-1">
+                        <button onclick="moveSection(${idx}, 'up')" ${idx === 0 ? 'disabled' : ''} class="p-1.5 text-gray-500 rounded transition-colors ${upDisabled}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                        </button>
+                        <button onclick="moveSection(${idx}, 'down')" ${idx === state.sections.length - 1 ? 'disabled' : ''} class="p-1.5 text-gray-500 rounded transition-colors ${downDisabled}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                        </button>
+                    </div>
+                </div>`;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderEditorSections() {
+            document.getElementById('section-count').innerText = state.sections.length;
+            const container = document.getElementById('sections-editor');
+            
+            let html = state.sections.map((sec, idx) => {
+                let itemsHtml = sec.items.map((item, itemIdx) => `
+                    <div class="flex gap-2 items-center">
+                        <input type="text" class="section-item-input flex-1 p-1.5 border border-gray-200 rounded text-sm outline-none focus:border-blue-400 bg-gray-50 focus:bg-white" data-id="${sec.id}" data-idx="${itemIdx}" value="${escapeHtml(item)}" placeholder="e.g. 8 NEW POPS ANNOUNCED" />
+                        <button onclick="removeItem(${sec.id}, ${itemIdx})" class="text-gray-400 hover:text-red-500 p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
+                `).join('');
+
+                let imgHtml = sec.image ? `
+                    <img src="${sec.image}" class="h-10 w-10 object-contain bg-gray-50 border rounded" />
+                    <label class="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-md p-2 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <span class="text-xs text-gray-500 font-medium">Change Image</span>
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, ${sec.id})" class="hidden" />
+                    </label>
+                    <button onclick="removeImage(${sec.id})" class="text-xs text-red-500 hover:underline">Remove</button>
+                ` : `
+                    <label class="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-md p-2 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <svg class="text-gray-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <span class="text-xs text-gray-500 font-medium">Upload Image</span>
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, ${sec.id})" class="hidden" />
+                    </label>
+                `;
+
+                return `
+                <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm relative group mb-6">
+                    <button onclick="removeSection(${sec.id})" class="absolute -top-3 -right-3 bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white shadow-sm" title="Remove Section">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+
+                    <div class="flex gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Section Title</label>
+                            <input type="text" class="section-title-input w-full p-2 border border-gray-300 rounded-md outline-none text-sm font-bold" data-id="${sec.id}" value="${escapeHtml(sec.title)}" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Color</label>
+                            <input type="color" class="section-color-input h-9 w-12 p-0.5 border border-gray-300 rounded-md cursor-pointer" data-id="${sec.id}" value="${sec.color}" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Logo/Icon Image (Optional)</label>
+                        <div class="flex items-center gap-3">
+                            ${imgHtml}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-2">Content Lines</label>
+                        <div class="space-y-2 mb-2">
+                            ${itemsHtml}
+                        </div>
+                        <button onclick="addItem(${sec.id})" class="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Line
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderPreview() {
+            const wrapper = document.getElementById('canvas-wrapper');
+            const preview = document.getElementById('canvas-preview');
+            
+            // Adjust Zoom wrapper sizing
+            wrapper.style.width = `${state.canvasWidth * (state.zoom / 100)}px`;
+            wrapper.style.height = `${state.canvasHeight * (state.zoom / 100)}px`;
+
+            // Adjust actual Canvas internal sizing
+            preview.style.width = `${state.canvasWidth}px`;
+            preview.style.height = `${state.canvasHeight}px`;
+            preview.style.transform = `scale(${state.zoom / 100})`;
+            preview.style.transformOrigin = 'top left';
+            
+            const baseFontSize = (state.canvasWidth / 1080) * 16;
+            preview.style.fontSize = `${baseFontSize}px`;
+            preview.style.padding = '2.5em';
+
+            const headerScale = state.headerTextScale / 100;
+            const innerScale = state.innerTextScale / 100;
+
+            let sectionsHtml = state.sections.map(sec => {
+                let itemsListHtml = sec.items.map((item, idx) => {
+                    const isBulletedList = sec.items.length > 2 && idx === 0 && item.includes(' as ');
+                    const content = isBulletedList ? 
+                        `<span class="flex items-center justify-center gap-2"><span class="rounded-full bg-gray-400 inline-block" style="width: 0.3em; height: 0.3em;"></span>${escapeHtml(item)}</span>` 
+                        : escapeHtml(item);
+                    return `<p class="font-bold text-gray-900 leading-snug tracking-tight" style="font-size: ${1.1 * innerScale}em; margin: 0.15em 0;">${content}</p>`;
+                }).join('');
+
+                let imgHtml = sec.image ? 
+                    `<div class="flex-1 flex items-center justify-center w-full" style="min-height: 5em; margin-bottom: 1em;">
+                        <img src="${sec.image}" class="object-contain" style="max-height: 7em;" />
+                    </div>` : '';
+
+                return `
+                <div class="bg-white flex flex-col overflow-hidden h-full shadow-[0_4px_0_0_rgba(0,0,0,0.1)] rounded-[1em]" style="border: 0.25em solid #2c3e50;">
+                    <div class="text-center" style="background-color: ${sec.color}; padding: 0.5em 0.75em; border-bottom: 0.25em solid #2c3e50;">
+                        <h2 class="text-white font-extrabold uppercase leading-tight drop-shadow-sm tracking-wide" style="font-size: ${1.1 * headerScale}em;">${escapeHtml(sec.title)}</h2>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center text-center" style="padding: 1.5em;">
+                        ${imgHtml}
+                        <div class="w-full flex flex-col justify-center">
+                            ${itemsListHtml}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const isSingle = state.sections.length === 1;
+
+            preview.innerHTML = `
+                <div class="text-center flex flex-col items-center" style="margin-bottom: 2em;">
+                    <h3 class="font-bold tracking-tight text-gray-800" style="font-size: ${1.5 * headerScale}em;">${escapeHtml(state.handle)}</h3>
+                    <h1 class="font-black tracking-tighter text-black leading-none mt-1" style="font-size: ${4.5 * headerScale}em;">${escapeHtml(state.mainTitle)}</h1>
+                </div>
+                <div class="flex-1 grid ${isSingle ? 'grid-cols-1 w-full' : 'grid-cols-2'}" style="gap: 1.5em; max-width: ${isSingle ? '50%' : '100%'}; margin: ${isSingle ? '0 auto' : '0'};">
+                    ${sectionsHtml}
+                </div>
+                <div class="text-center" style="margin-top: 2em;">
+                    <p class="font-bold text-gray-500 uppercase tracking-widest" style="font-size: ${0.8 * innerScale}em;">${escapeHtml(state.footer)}</p>
+                </div>
+            `;
+        }
+
+        // 4. Action Handlers (Must be on Window for inline HTML onclick)
+        window.addSection = () => {
+            const newId = state.sections.length > 0 ? Math.max(...state.sections.map(s => s.id)) + 1 : 1;
+            state.sections.push({ id: newId, title: "NEW SECTION", color: "#3b82f6", image: "", items: ["New Item"] });
+            fullRender();
+        };
+
+        window.removeSection = (id) => {
+            state.sections = state.sections.filter(s => s.id !== id);
+            fullRender();
+        };
+
+        window.moveSection = (index, direction) => {
+            if (direction === 'up' && index > 0) {
+                [state.sections[index - 1], state.sections[index]] = [state.sections[index], state.sections[index - 1]];
+            } else if (direction === 'down' && index < state.sections.length - 1) {
+                [state.sections[index + 1], state.sections[index]] = [state.sections[index], state.sections[index + 1]];
+            }
+            fullRender();
+        };
+
+        window.addItem = (sectionId) => {
+            const sec = state.sections.find(s => s.id === sectionId);
+            if(sec) {
+                sec.items.push("New Item");
+                renderEditorSections();
+                renderPreview();
+            }
+        };
+
+        window.removeItem = (sectionId, itemIndex) => {
+            const sec = state.sections.find(s => s.id === sectionId);
+            if(sec) {
+                sec.items.splice(itemIndex, 1);
+                renderEditorSections();
+                renderPreview();
+            }
+        };
+
+        window.handleImageUpload = (event, sectionId) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const sec = state.sections.find(s => s.id === sectionId);
+                    if(sec) sec.image = reader.result;
+                    renderEditorSections();
+                    renderPreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        window.removeImage = (sectionId) => {
+            const sec = state.sections.find(s => s.id === sectionId);
+            if(sec) sec.image = '';
+            renderEditorSections();
+            renderPreview();
+        };
+
+        window.downloadImage = async () => {
+            if (!window.html2canvas) {
+                alert("Please wait for dependencies to load.");
+                return;
+            }
+            
+            const previewEl = document.getElementById('canvas-preview');
+            const originalTransform = previewEl.style.transform;
+            
+            // Temporarily remove transform scaling to capture actual requested size
+            previewEl.style.transform = 'none';
+            
+            try {
+                const canvas = await window.html2canvas(previewEl, {
+                    scale: 1,
+                    backgroundColor: "#fcfbf6",
+                    logging: false,
+                    useCORS: true
+                });
+                
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = `Infographic-${state.canvasWidth}x${state.canvasHeight}.png`;
+                link.click();
+            } catch (error) {
+                console.error("Error generating image:", error);
+                alert("There was an issue generating the image. Please try again.");
+            } finally {
+                // Restore transform UI scale
+                previewEl.style.transform = originalTransform;
+            }
+        };
+    </script>
+</body>
+</html>
