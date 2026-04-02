@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drop List Maker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; }
+    body { background: #0a0a12; font-family: 'Syne', sans-serif; overflow: hidden; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #252535; border-radius: 99px; }
+    input[type=range] { cursor: pointer; accent-color: #7b7bff; }
+    input[type=color] { cursor: pointer; }
+    button { font-family: 'Syne', sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    /* ─── SVG Icons ─────────────────────────────────────────────────────── */
+    const Ico = ({ children, size = 16 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        style={{ display: 'block', flexShrink: 0 }}>
+        {children}
+      </svg>
+    );
+    const IcoDownload  = ({ s }) => <Ico size={s}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Ico>;
+    const IcoPlus      = ({ s }) => <Ico size={s}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Ico>;
+    const IcoTrash     = ({ s }) => <Ico size={s}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></Ico>;
+    const IcoX         = ({ s }) => <Ico size={s}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Ico>;
+    const IcoChevUp    = ({ s }) => <Ico size={s}><polyline points="18 15 12 9 6 15"/></Ico>;
+    const IcoChevDown  = ({ s }) => <Ico size={s}><polyline points="6 9 12 15 18 9"/></Ico>;
+    const IcoChevRight = ({ s }) => <Ico size={s}><polyline points="9 18 15 12 9 6"/></Ico>;
+    const IcoImage     = ({ s }) => <Ico size={s}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></Ico>;
+
+    /* ─── Helpers ────────────────────────────────────────────────────────── */
+    const hexToRgb = hex => ({
+      r: parseInt(hex.slice(1,3), 16),
+      g: parseInt(hex.slice(3,5), 16),
+      b: parseInt(hex.slice(5,7), 16)
+    });
+    const hexLum    = hex => { try { const {r,g,b} = hexToRgb(hex); return (0.299*r+0.587*g+0.114*b)/255; } catch { return 0.5; }};
+    const hexRgba   = (hex, a) => { try { const {r,g,b} = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; } catch { return `rgba(0,0,0,${a})`; }};
+
+    /* ─── Shared style tokens ─────────────────────────────────────────────  */
+    const T = {
+      label: { fontSize:10, fontWeight:700, color:'#5a5a6a', textTransform:'uppercase',
+               letterSpacing:'0.1em', display:'block', marginBottom:5 },
+      input: { width:'100%', background:'#1a1a24', border:'1px solid #2e2e3e', borderRadius:7,
+               padding:'8px 10px', color:'#e8e8f0', fontSize:13, fontFamily:"'Syne',sans-serif",
+               outline:'none', boxSizing:'border-box' },
+      colorPicker: { width:40, height:36, border:'1px solid #2e2e3e', borderRadius:7,
+                     background:'none', padding:3, flexShrink:0 },
+    };
+
+    /* ─── Reusable UI pieces ─────────────────────────────────────────────── */
+    function Label({ children }) {
+      return <span style={T.label}>{children}</span>;
+    }
+
+    function TextInput({ value, onChange, style, ...rest }) {
+      return <input type="text" value={value} onChange={onChange} style={{ ...T.input, ...style }} {...rest} />;
+    }
+
+    function NumberInput({ value, onChange }) {
+      return <input type="number" value={value} onChange={e => onChange(+e.target.value)} style={T.input} />;
+    }
+
+    function SliderRow({ label, value, min=10, max=200, onChange, unit='%' }) {
+      return (
+        <div>
+          <div style={{ display:'flex', justifyContent:'space-between', ...T.label, marginBottom:6 }}>
+            <span>{label}</span>
+            <span style={{ color:'#9090b0', fontVariantNumeric:'tabular-nums' }}>{value}{unit}</span>
+          </div>
+          <input type="range" min={min} max={max} value={value}
+            onChange={e => onChange(+e.target.value)} style={{ width:'100%' }} />
+        </div>
+      );
+    }
+
+    function SegControl({ options, value, onChange }) {
+      return (
+        <div style={{ display:'flex', gap:4, background:'#0d0d18', borderRadius:8, padding:3 }}>
+          {options.map(o => (
+            <button key={o.v} onClick={() => onChange(o.v)} style={{
+              flex:1, padding:'7px 4px', border:'none', borderRadius:6,
+              background: value===o.v ? '#2a2a3e' : 'transparent',
+              color: value===o.v ? '#c8c8f8' : '#454560',
+              fontSize:11, fontWeight:700, cursor:'pointer',
+              fontFamily:"'Syne',sans-serif", transition:'background .15s,color .15s'
+            }}>{o.l}</button>
+          ))}
+        </div>
+      );
+    }
+
+    function IconBtn({ onClick, disabled, danger, title, children }) {
+      const base = { padding:'3px 4px', background:'none', border:'none', borderRadius:4,
+                     color: disabled ? '#252530' : danger ? '#6b3a3a' : '#3a3a5a',
+                     cursor: disabled ? 'default' : 'pointer', lineHeight:1 };
+      return (
+        <button onClick={onClick} disabled={disabled} title={title} style={base}
+          onMouseEnter={e=>{ if(!disabled) e.currentTarget.style.color = danger?'#f87171':'#9090b0'; }}
+          onMouseLeave={e=>{ e.currentTarget.style.color = disabled?'#252530':danger?'#6b3a3a':'#3a3a5a'; }}>
+          {children}
+        </button>
+      );
+    }
+
+    /* ─── Section Card (on the canvas) ───────────────────────────────────── */
+    function SectionCard({ section, cardStyle, headerScale, bodyScale, base }) {
+      const lum    = hexLum(section.color);
+      const onClr  = lum > 0.55 ? '#0d0d0d' : '#ffffff';
+
+      const V = {
+        classic: {
+          wrap:   { background:'#fff', border:`3px solid #0f0f0f`,
+                    borderRadius: base*.75, overflow:'hidden',
+                    display:'flex', flexDirection:'column',
+                    boxShadow:`0 ${base*.35}px 0 #0a0a0a` },
+          head:   { background:section.color, padding:`${base*.55}px ${base*.8}px`,
+                    borderBottom:'3px solid #0f0f0f' },
+          headTx: { color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,.35)' },
+          body:   { flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+                    justifyContent:'center', padding:`${base*1.1}px ${base*.75}px`, background:'#fff' },
+          itemClr:'#0d0d0d',
+        },
+        modern: {
+          wrap:   { background:'#fff', borderLeft:`6px solid ${section.color}`,
+                    borderRadius: base*.5, overflow:'hidden',
+                    display:'flex', flexDirection:'column',
+                    boxShadow:`0 ${base*.15}px ${base*1.2}px rgba(0,0,0,.1),
+                               inset 0 0 0 1px rgba(0,0,0,.07)` },
+          head:   { background: hexRgba(section.color,.1),
+                    padding:`${base*.55}px ${base*.8}px`,
+                    borderBottom:`1px solid ${hexRgba(section.color,.2)}` },
+          headTx: { color: section.color },
+          body:   { flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+                    justifyContent:'center', padding:`${base*1.1}px ${base*.75}px`, background:'#fff' },
+          itemClr:'#1a1a1a',
+        },
+        bold: {
+          wrap:   { background:section.color, border:`3px solid rgba(0,0,0,.18)`,
+                    borderRadius: base*.75, overflow:'hidden',
+                    display:'flex', flexDirection:'column',
+                    boxShadow:`0 ${base*.35}px 0 rgba(0,0,0,.22)` },
+          head:   { background:'rgba(0,0,0,.18)', padding:`${base*.55}px ${base*.8}px` },
+          headTx: { color: onClr },
+          body:   { flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+                    justifyContent:'center', padding:`${base*1.1}px ${base*.75}px` },
+          itemClr: onClr,
+        },
+      };
+      const v = V[cardStyle] || V.classic;
+
+      return (
+        <div style={v.wrap}>
+          <div style={v.head}>
+            <div style={{ fontSize: base*1.15*(headerScale/100), fontWeight:800,
+                          textAlign:'center', lineHeight:1.1, textTransform:'uppercase',
+                          letterSpacing:'0.04em', fontFamily:"'Barlow Condensed',sans-serif",
+                          ...v.headTx }}>
+              {section.title}
+            </div>
+          </div>
+          <div style={v.body}>
+            {section.image && (
+              <div style={{ marginBottom: base*.75, display:'flex', justifyContent:'center' }}>
+                <img src={section.image} alt={section.title}
+                  style={{ maxHeight: base*5.5, maxWidth:'100%', objectFit:'contain' }} />
+              </div>
+            )}
+            <div style={{ width:'100%', textAlign:'center' }}>
+              {section.items.map((item, i) => (
+                <div key={i} style={{ fontSize: base*1.08*(bodyScale/100), fontWeight:700,
+                                      color:v.itemClr, lineHeight:1.35, margin:`${base*.18}px 0`,
+                                      fontFamily:"'Barlow Condensed',sans-serif" }}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── Section Editor Row (sidebar) ──────────────────────────────────── */
+    function SectionEditor({ section, idx, total, expanded, onToggle, onRemove,
+                             onUpdate, onMoveUp, onMoveDown, onAddItem,
+                             onUpdateItem, onRemoveItem, onImageUpload }) {
+      return (
+        <div style={{ border:'1px solid #22222e', borderRadius:9, overflow:'hidden', background:'#14141e' }}>
+          {/* Collapsed header */}
+          <div onClick={onToggle}
+            style={{ display:'flex', alignItems:'center', gap:9,
+                     padding:'10px 12px', cursor:'pointer', userSelect:'none' }}>
+            <div style={{ width:11, height:11, borderRadius:'50%', background:section.color,
+                          flexShrink:0,
+                          boxShadow:`0 0 0 2px rgba(255,255,255,.08),0 0 8px ${hexRgba(section.color,.5)}` }} />
+            <span style={{ flex:1, fontSize:12, fontWeight:700, color:'#c8c8d8',
+                           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {section.title || 'Untitled'}
+            </span>
+            <div style={{ display:'flex', gap:1, alignItems:'center' }}>
+              <IconBtn onClick={e=>{e.stopPropagation();onMoveUp();}} disabled={idx===0} title="Move up"><IcoChevUp s={11}/></IconBtn>
+              <IconBtn onClick={e=>{e.stopPropagation();onMoveDown();}} disabled={idx===total-1} title="Move down"><IcoChevDown s={11}/></IconBtn>
+              <IconBtn onClick={e=>{e.stopPropagation();onRemove();}} danger title="Remove"><IcoX s={11}/></IconBtn>
+            </div>
+            <span style={{ color:'#3a3a4a', display:'flex',
+                           transform: expanded ? 'rotate(90deg)' : 'none',
+                           transition:'transform .15s' }}>
+              <IcoChevRight s={12}/>
+            </span>
+          </div>
+
+          {/* Expanded body */}
+          {expanded && (
+            <div style={{ padding:'12px 14px', borderTop:'1px solid #1e1e2a',
+                          display:'flex', flexDirection:'column', gap:13 }}>
+              {/* Title + color */}
+              <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
+                <div style={{ flex:1 }}>
+                  <Label>Title</Label>
+                  <TextInput value={section.title} onChange={e=>onUpdate('title',e.target.value)}/>
+                </div>
+                <div>
+                  <Label>Color</Label>
+                  <input type="color" value={section.color}
+                    onChange={e=>onUpdate('color',e.target.value)} style={T.colorPicker}/>
+                </div>
+              </div>
+
+              {/* Image */}
+              <div>
+                <Label>Image (optional)</Label>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  {section.image && (
+                    <img src={section.image} alt=""
+                      style={{ width:34, height:34, objectFit:'contain',
+                               borderRadius:5, border:'1px solid #2e2e3e' }} />
+                  )}
+                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center',
+                                  gap:6, border:'1px dashed #2e2e3e', borderRadius:7,
+                                  padding:7, cursor:'pointer', color:'#4a4a5a',
+                                  fontSize:11, fontWeight:700, fontFamily:"'Syne',sans-serif" }}>
+                    <IcoImage s={11}/> {section.image ? 'Change Image' : 'Upload Image'}
+                    <input type="file" accept="image/*" onChange={onImageUpload} style={{ display:'none' }} />
+                  </label>
+                  {section.image && (
+                    <button onClick={()=>onUpdate('image','')}
+                      style={{ background:'none', border:'none', color:'#f87171',
+                               cursor:'pointer', padding:2, lineHeight:1 }}>
+                      <IcoX s={13}/>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <Label>Content Items</Label>
+                <div style={{ display:'flex', flexDirection:'column', gap:5, marginBottom:7 }}>
+                  {section.items.map((item, i) => (
+                    <div key={i} style={{ display:'flex', gap:6, alignItems:'center' }}>
+                      <input type="text" value={item}
+                        onChange={e=>onUpdateItem(i,e.target.value)}
+                        style={{ ...T.input, flex:1, padding:'6px 9px' }}
+                        placeholder="e.g. NEW POP ANNOUNCED" />
+                      <button onClick={()=>onRemoveItem(i)}
+                        style={{ background:'none', border:'none', color:'#3a3a4a',
+                                 cursor:'pointer', padding:'0 2px', lineHeight:1 }}>
+                        <IcoTrash s={12}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={onAddItem}
+                  style={{ display:'flex', alignItems:'center', gap:4, background:'none',
+                           border:'none', color:'#5a5a8a', fontSize:11, fontWeight:700,
+                           cursor:'pointer', padding:0, fontFamily:"'Syne',sans-serif" }}>
+                  <IcoPlus s={11}/> Add Item
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── Divider ornament ───────────────────────────────────────────────── */
+    function Divider({ base, color }) {
+      const op = c => ({ height:2, background:color, opacity:c });
+      const dot = (r, op) => ({
+        width: base*r, height: base*r, borderRadius:'50%',
+        background:color, opacity:op, flexShrink:0
+      });
+      return (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                      gap: base*.4, marginTop: base*.6 }}>
+          <div style={{ ...op(.12), width: base*2 }}/>
+          <div style={dot(.32,.35)}/>
+          <div style={{ ...op(.45), flex:1, maxWidth: base*4 }}/>
+          <div style={dot(.45,1)}/>
+          <div style={{ ...op(.45), flex:1, maxWidth: base*4 }}/>
+          <div style={dot(.32,.35)}/>
+          <div style={{ ...op(.12), width: base*2 }}/>
+        </div>
+      );
+    }
+
+    /* ─── Default sections data ──────────────────────────────────────────── */
+    const DEFAULT_SECTIONS = [
+      { id:1, title:"STRANGER THINGS: TALES FROM '85", color:"#328294", image:"", items:["8 NEW POPS ANNOUNCED"] },
+      { id:2, title:"BATMAN BEYOND: RETURN OF THE JOKER", color:"#b92b27", image:"", items:["BATMAN W/ ACE","JOKER W/ GUN","DEE DEE 2-PACK"] },
+      { id:3, title:"LORD OF THE RINGS", color:"#c8a227", image:"", items:["GIMLI SAYINGS"] },
+      { id:4, title:"WICKED × CARE BEARS", color:"#3d9e5f", image:"", items:["Good Luck Bear as Elphaba","Love-a-Lot Bear as Glinda","Funshine Bear as Scarecrow","Grumpy Bear as Tin Man","Tenderheart Bear as Cowardly Lion"] },
+      { id:5, title:"PEACEMAKER", color:"#4a6cf7", image:"", items:["DOPPELGANGER PEACEMAKER"] },
+      { id:6, title:"THE DEVIL WEARS PRADA 2", color:"#db2777", image:"", items:["ANDY, EMILY, MIRANDA"] },
+    ];
+
+    /* ─── Root App ───────────────────────────────────────────────────────── */
+    function App() {
+      const [tab,          setTab]          = useState('sections');
+      const [handle,       setHandle]       = useState('@FunkoPOPNews');
+      const [mainTitle,    setMainTitle]    = useState('NEXT WEEK');
+      const [footer,       setFooter]       = useState('FUNKO POP! COLLECTIBLES');
+      const [bgColor,      setBgColor]      = useState('#faf8f3');
+      const [accentColor,  setAccentColor]  = useState('#0f0f0f');
+      const [columns,      setColumns]      = useState(2);
+      const [cardStyle,    setCardStyle]    = useState('classic');
+      const [canvasW,      setCanvasW]      = useState(1080);
+      const [canvasH,      setCanvasH]      = useState(1080);
+      const [zoom,         setZoom]         = useState(48);
+      const [headerScale,  setHeaderScale]  = useState(100);
+      const [bodyScale,    setBodyScale]    = useState(100);
+      const [expandedId,   setExpandedId]   = useState(null);
+      const [sections,     setSections]     = useState(DEFAULT_SECTIONS);
+
+      const previewRef = useRef(null);
+      const base = (canvasW / 1080) * 16;
+
+      /* Section CRUD */
+      const addSection = () => {
+        const id = Date.now();
+        setSections(s => [...s, { id, title:"NEW SECTION", color:"#6366f1", image:"", items:["New item"] }]);
+        setExpandedId(id);
+      };
+      const removeSection  = id => setSections(s => s.filter(x => x.id !== id));
+      const updateSection  = (id, field, val) => setSections(s => s.map(x => x.id===id ? {...x,[field]:val} : x));
+      const moveSection    = (idx, dir) => {
+        const arr = [...sections];
+        if (dir==='up'   && idx>0)             [arr[idx-1],arr[idx]] = [arr[idx],arr[idx-1]];
+        if (dir==='down' && idx<arr.length-1)  [arr[idx+1],arr[idx]] = [arr[idx],arr[idx+1]];
+        setSections(arr);
+      };
+      const addItem    = id  => setSections(s => s.map(x => x.id===id ? {...x, items:[...x.items,""]} : x));
+      const updateItem = (id,i,v) => setSections(s => s.map(x => x.id===id ? {...x, items:x.items.map((it,j)=>j===i?v:it)} : x));
+      const removeItem = (id,i)   => setSections(s => s.map(x => x.id===id ? {...x, items:x.items.filter((_,j)=>j!==i)} : x));
+      const handleImg  = (e, id)  => {
+        const file = e.target.files[0]; if (!file) return;
+        const r = new FileReader();
+        r.onloadend = () => updateSection(id, 'image', r.result);
+        r.readAsDataURL(file);
+      };
+
+      /* Download */
+      const download = async () => {
+        if (!window.html2canvas) { alert("html2canvas still loading — try again in a moment."); return; }
+        const el = previewRef.current;
+        const orig = el.style.transform;
+        el.style.transform = 'none';
+        try {
+          const canvas = await window.html2canvas(el, { scale:1, backgroundColor:bgColor, logging:false, useCORS:true });
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = `drop-list-${canvasW}x${canvasH}.png`;
+          a.click();
+        } catch(e) { alert("Error generating image. Try a browser screenshot instead."); }
+        finally { el.style.transform = orig; }
+      };
+
+      return (
+        <div style={{ display:'flex', height:'100vh', overflow:'hidden',
+                      fontFamily:"'Syne',sans-serif", background:'#0a0a12' }}>
+
+          {/* ══ SIDEBAR ════════════════════════════════════════════════════ */}
+          <div style={{ width:340, minWidth:340, background:'#0d0d18',
+                        borderRight:'1px solid #1a1a28',
+                        overflowY:'auto', display:'flex', flexDirection:'column' }}>
+
+            {/* Top bar */}
+            <div style={{ padding:'18px 20px', borderBottom:'1px solid #1a1a28',
+                          display:'flex', alignItems:'center', justifyContent:'space-between',
+                          position:'sticky', top:0, background:'#0d0d18', zIndex:10 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:800, color:'#e8e8f8', letterSpacing:'-0.03em' }}>
+                  Drop List Maker
+                </div>
+                <div style={{ fontSize:11, color:'#3a3a5a', marginTop:1 }}>
+                  Custom infographic builder
+                </div>
+              </div>
+              <button onClick={download} style={{
+                display:'flex', alignItems:'center', gap:6, background:'#e8e8f8',
+                color:'#0d0d18', border:'none', borderRadius:8, padding:'8px 14px',
+                fontSize:12, fontWeight:800, cursor:'pointer',
+                fontFamily:"'Syne',sans-serif", letterSpacing:'0.02em'
+              }}>
+                <IcoDownload s={13}/> Save PNG
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display:'flex', borderBottom:'1px solid #1a1a28',
+                          padding:'0 8px', gap:2 }}>
+              {[{id:'canvas',l:'⚙ Canvas'},{id:'sections',l:'◈ Sections'}].map(t => (
+                <button key={t.id} onClick={()=>setTab(t.id)} style={{
+                  flex:1, padding:'11px 0', background:'none', border:'none',
+                  borderBottom: tab===t.id ? '2px solid #7b7bff' : '2px solid transparent',
+                  color: tab===t.id ? '#a0a0f8' : '#3a3a5a',
+                  fontSize:11, fontWeight:700, textTransform:'uppercase',
+                  letterSpacing:'0.09em', cursor:'pointer',
+                  fontFamily:"'Syne',sans-serif", marginBottom:-1,
+                  transition:'color .15s'
+                }}>{t.l}</button>
+              ))}
+            </div>
+
+            {/* Tab body */}
+            <div style={{ padding:18, flex:1 }}>
+
+              {tab === 'canvas' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+                  <div>
+                    <Label>Canvas Size (px)</Label>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:6 }}>
+                      <div><Label>Width</Label><NumberInput value={canvasW} onChange={setCanvasW}/></div>
+                      <div><Label>Height</Label><NumberInput value={canvasH} onChange={setCanvasH}/></div>
+                    </div>
+                  </div>
+
+                  <SliderRow label="Preview Zoom" value={zoom} min={10} max={150} onChange={setZoom}/>
+
+                  <div style={{ borderTop:'1px solid #1a1a28', paddingTop:18, display:'flex', flexDirection:'column', gap:14 }}>
+                    <div>
+                      <Label>Background Color</Label>
+                      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={T.colorPicker}/>
+                        <TextInput value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{ flex:1 }} maxLength={7}/>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Border / Accent Color</Label>
+                      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <input type="color" value={accentColor} onChange={e=>setAccentColor(e.target.value)} style={T.colorPicker}/>
+                        <TextInput value={accentColor} onChange={e=>setAccentColor(e.target.value)} style={{ flex:1 }} maxLength={7}/>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop:'1px solid #1a1a28', paddingTop:18, display:'flex', flexDirection:'column', gap:14 }}>
+                    <div>
+                      <Label>Grid Columns</Label>
+                      <SegControl value={columns} onChange={setColumns}
+                        options={[{v:1,l:'1 Col'},{v:2,l:'2 Cols'},{v:3,l:'3 Cols'}]}/>
+                    </div>
+                    <div>
+                      <Label>Card Style</Label>
+                      <SegControl value={cardStyle} onChange={setCardStyle}
+                        options={[{v:'classic',l:'Classic'},{v:'modern',l:'Modern'},{v:'bold',l:'Bold'}]}/>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop:'1px solid #1a1a28', paddingTop:18, display:'flex', flexDirection:'column', gap:14 }}>
+                    <SliderRow label="Header Text Size" value={headerScale} min={50} max={200} onChange={setHeaderScale}/>
+                    <SliderRow label="Body Text Size"   value={bodyScale}   min={50} max={200} onChange={setBodyScale}/>
+                  </div>
+
+                  <div style={{ borderTop:'1px solid #1a1a28', paddingTop:18, display:'flex', flexDirection:'column', gap:12 }}>
+                    <div><Label>Handle / Top Text</Label>
+                      <TextInput value={handle} onChange={e=>setHandle(e.target.value)}/></div>
+                    <div><Label>Main Heading</Label>
+                      <TextInput value={mainTitle} onChange={e=>setMainTitle(e.target.value)}
+                        style={{ fontWeight:800, letterSpacing:'-0.01em' }}/></div>
+                    <div><Label>Footer Text</Label>
+                      <TextInput value={footer} onChange={e=>setFooter(e.target.value)}/></div>
+                  </div>
+                </div>
+              )}
+
+              {tab === 'sections' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#3a3a5a',
+                                textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:4 }}>
+                    {sections.length} Section{sections.length!==1?'s':''}
+                  </div>
+                  {sections.map((sec, idx) => (
+                    <SectionEditor
+                      key={sec.id} section={sec} idx={idx} total={sections.length}
+                      expanded={expandedId===sec.id}
+                      onToggle={()=>setExpandedId(expandedId===sec.id?null:sec.id)}
+                      onRemove={()=>removeSection(sec.id)}
+                      onUpdate={(f,v)=>updateSection(sec.id,f,v)}
+                      onMoveUp={()=>moveSection(idx,'up')}
+                      onMoveDown={()=>moveSection(idx,'down')}
+                      onAddItem={()=>addItem(sec.id)}
+                      onUpdateItem={(i,v)=>updateItem(sec.id,i,v)}
+                      onRemoveItem={i=>removeItem(sec.id,i)}
+                      onImageUpload={e=>handleImg(e,sec.id)}
+                    />
+                  ))}
+                  <button onClick={addSection} style={{
+                    width:'100%', marginTop:4, padding:11,
+                    border:'1px dashed #1e1e2e', borderRadius:9,
+                    background:'none', color:'#3a3a5a', fontSize:11, fontWeight:700,
+                    cursor:'pointer', display:'flex', alignItems:'center',
+                    justifyContent:'center', gap:6, fontFamily:"'Syne',sans-serif"
+                  }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='#4a4a6a';e.currentTarget.style.color='#7070a0';}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='#1e1e2e';e.currentTarget.style.color='#3a3a5a';}}>
+                    <IcoPlus s={13}/> ADD SECTION
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ══ PREVIEW ════════════════════════════════════════════════════ */}
+          <div style={{
+            flex:1, overflow:'auto', display:'flex',
+            alignItems:'center', justifyContent:'center', padding:40,
+            background:'#0a0a12',
+            backgroundImage:'radial-gradient(circle, #1e1e2e 1px, transparent 1px)',
+            backgroundSize:'22px 22px'
+          }}>
+            {/* shadow wrapper — matches the zoom-scaled dimensions */}
+            <div style={{
+              position:'relative', flexShrink:0,
+              width:  canvasW * zoom/100,
+              height: canvasH * zoom/100,
+              boxShadow:'0 32px 100px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04)'
+            }}>
+              {/* actual canvas — full size, then scaled via transform */}
+              <div ref={previewRef} style={{
+                width:  canvasW, height: canvasH,
+                background: bgColor,
+                transform: `scale(${zoom/100})`,
+                transformOrigin: 'top left',
+                position:'absolute', top:0, left:0,
+                display:'flex', flexDirection:'column',
+                padding: base*2.5,
+                boxSizing:'border-box',
+                fontFamily:"'Barlow Condensed',sans-serif",
+                fontSize: base,
+                overflow:'hidden'
+              }}>
+                {/* Header */}
+                <div style={{ textAlign:'center', marginBottom: base*1.8 }}>
+                  <div style={{ fontSize: base*1.1*(headerScale/100), fontWeight:700,
+                                color:'#999', letterSpacing:'0.18em', textTransform:'uppercase',
+                                fontFamily:"'Barlow Condensed',sans-serif" }}>
+                    {handle}
+                  </div>
+                  <div style={{ fontSize: base*6.5*(headerScale/100),
+                                fontFamily:"'Bebas Neue',sans-serif",
+                                color: accentColor, lineHeight:.88, letterSpacing:'0.03em',
+                                marginTop: base*.25 }}>
+                    {mainTitle}
+                  </div>
+                  <Divider base={base} color={accentColor}/>
+                </div>
+
+                {/* Grid */}
+                <div style={{ flex:1, display:'grid',
+                              gridTemplateColumns:`repeat(${columns},1fr)`,
+                              gap: base*1.1, minHeight:0 }}>
+                  {sections.map(sec => (
+                    <SectionCard key={sec.id} section={sec}
+                      cardStyle={cardStyle} headerScale={headerScale}
+                      bodyScale={bodyScale} base={base}/>
+                  ))}
+                </div>
+
+                {/* Footer */}
+                <div style={{ textAlign:'center', marginTop: base*1.4 }}>
+                  <div style={{ fontSize: base*.72*(bodyScale/100), fontWeight:700,
+                                color:'#aaa', letterSpacing:'0.22em', textTransform:'uppercase',
+                                fontFamily:"'Barlow Condensed',sans-serif" }}>
+                    {footer}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
