@@ -1,0 +1,545 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Image as ImageIcon, Download, Settings, Type, Maximize, List, ArrowUp, ArrowDown } from 'lucide-react';
+
+export default function App() {
+  // Dynamically load html2canvas for the download feature
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    document.head.appendChild(script);
+  }, []);
+
+  // Application State
+  const [handle, setHandle] = useState('@FunkoPOPNews');
+  const [mainTitle, setMainTitle] = useState('Next Week');
+  const [footer, setFooter] = useState('FUNKO POP! COLLECTIBLES');
+  
+  // Canvas Settings State
+  const [canvasWidth, setCanvasWidth] = useState(1080);
+  const [canvasHeight, setCanvasHeight] = useState(1080);
+  const [zoom, setZoom] = useState(50); // 50% scale for previewing
+  
+  const [headerTextScale, setHeaderTextScale] = useState(100);
+  const [innerTextScale, setInnerTextScale] = useState(100);
+  
+  const [sections, setSections] = useState([
+    {
+      id: 1,
+      title: "STRANGER THINGS: TALES FROM '85",
+      color: "#328294",
+      image: "",
+      items: ["8 NEW POPS ANNOUNCED"]
+    },
+    {
+      id: 2,
+      title: "BATMAN BEYOND: RETURN OF THE JOKER",
+      color: "#b92b27",
+      image: "",
+      items: ["BATMAN W/ ACE, JOKER W/ GUN,", "DEE DEE 2-PACK"]
+    },
+    {
+      id: 3,
+      title: "LORD OF THE RINGS",
+      color: "#d4af37",
+      image: "",
+      items: ["GIMLI SAYINGS"]
+    },
+    {
+      id: 4,
+      title: "WICKED × CARE BEARS",
+      color: "#4ade80",
+      image: "",
+      items: [
+        "Good Luck Bear as Elphaba",
+        "Love-a-Lot Bear as Glinda",
+        "Funshine Bear as Scarecrow",
+        "Grumpy Bear as Tin Man",
+        "Tenderheart Bear as Cowardly Lion"
+      ]
+    },
+    {
+      id: 5,
+      title: "PEACEMAKER",
+      color: "#6b7280",
+      image: "",
+      items: ["DOPPELGANGER PEACEMAKER"]
+    },
+    {
+      id: 6,
+      title: "THE DEVIL WEARS PRADA 2",
+      color: "#db2777",
+      image: "",
+      items: ["ANDY, EMILY, MIRANDA"]
+    }
+  ]);
+
+  const previewRef = useRef(null);
+
+  // --- Handlers ---
+
+  const handleAddSection = () => {
+    const newId = sections.length > 0 ? Math.max(...sections.map(s => s.id)) + 1 : 1;
+    setSections([...sections, { id: newId, title: "NEW SECTION", color: "#3b82f6", image: "", items: ["New Item"] }]);
+  };
+
+  const handleRemoveSection = (id) => {
+    setSections(sections.filter(s => s.id !== id));
+  };
+
+  const updateSection = (id, field, value) => {
+    setSections(sections.map(sec => sec.id === id ? { ...sec, [field]: value } : sec));
+  };
+
+  const moveSection = (index, direction) => {
+    const newSections = [...sections];
+    if (direction === 'up' && index > 0) {
+      [newSections[index - 1], newSections[index]] = [newSections[index], newSections[index - 1]];
+    } else if (direction === 'down' && index < newSections.length - 1) {
+      [newSections[index + 1], newSections[index]] = [newSections[index], newSections[index + 1]];
+    }
+    setSections(newSections);
+  };
+
+  const handleAddItem = (sectionId) => {
+    setSections(sections.map(sec => {
+      if (sec.id === sectionId) {
+        return { ...sec, items: [...sec.items, "New Item"] };
+      }
+      return sec;
+    }));
+  };
+
+  const handleUpdateItem = (sectionId, itemIndex, value) => {
+    setSections(sections.map(sec => {
+      if (sec.id === sectionId) {
+        const newItems = [...sec.items];
+        newItems[itemIndex] = value;
+        return { ...sec, items: newItems };
+      }
+      return sec;
+    }));
+  };
+
+  const handleRemoveItem = (sectionId, itemIndex) => {
+    setSections(sections.map(sec => {
+      if (sec.id === sectionId) {
+        const newItems = sec.items.filter((_, idx) => idx !== itemIndex);
+        return { ...sec, items: newItems };
+      }
+      return sec;
+    }));
+  };
+
+  const handleImageUpload = (e, sectionId) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateSection(sectionId, 'image', reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const downloadImage = async () => {
+    if (!window.html2canvas) {
+      alert("Please wait a moment for the image generator tool to load, then try again.");
+      return;
+    }
+    
+    const element = previewRef.current;
+    
+    // Temporarily un-scale the element to capture the true requested resolution
+    const originalTransform = element.style.transform;
+    element.style.transform = 'none';
+    
+    try {
+      const canvas = await window.html2canvas(element, {
+        scale: 1, // Will export exactly at the canvasWidth x canvasHeight defined
+        backgroundColor: "#fcfbf6",
+        logging: false,
+        useCORS: true
+      });
+      
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `Infographic-${canvasWidth}x${canvasHeight}.png`;
+      link.click();
+    } catch (error) {
+      console.error("Error generating image:", error);
+      alert("There was an issue generating the image. Please try again.");
+    } finally {
+      // Restore the preview zoom scale
+      element.style.transform = originalTransform;
+    }
+  };
+
+  // Base text scaling relative to the width (16px base at 1080px width)
+  const baseFontSize = (canvasWidth / 1080) * 16;
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row font-sans">
+      
+      {/* LEFT PANEL - EDITOR */}
+      <div className="w-full md:w-5/12 lg:w-1/3 bg-white border-r border-gray-200 h-screen overflow-y-auto p-6 shadow-xl z-10 flex flex-col relative">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 sticky top-0 bg-white z-20">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-gray-900">Graphic Maker</h1>
+            <p className="text-sm text-gray-500">Create custom drop lists</p>
+          </div>
+          <button 
+            onClick={downloadImage}
+            className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
+          >
+            <Download size={18} />
+            <span>Save</span>
+          </button>
+        </div>
+
+        {/* Global Settings */}
+        <div className="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Settings size={14}/> Canvas & Text Settings</h2>
+          
+          <div className="grid grid-cols-2 gap-3 mb-2">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Canvas Width (px)</label>
+              <input 
+                type="number" 
+                value={canvasWidth} 
+                onChange={(e) => setCanvasWidth(Number(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Canvas Height (px)</label>
+              <input 
+                type="number" 
+                value={canvasHeight} 
+                onChange={(e) => setCanvasHeight(Number(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="mb-4 pb-4 border-b border-gray-200">
+            <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+              <span className="flex items-center gap-1"><Maximize size={12}/> Preview Zoom</span>
+              <span>{zoom}%</span>
+            </label>
+            <input 
+              type="range" 
+              min="10" 
+              max="150" 
+              value={zoom} 
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-full accent-blue-600"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-gray-200">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+                <span>Header Size</span>
+                <span>{headerTextScale}%</span>
+              </label>
+              <input 
+                type="range" 
+                min="50" 
+                max="200" 
+                value={headerTextScale} 
+                onChange={(e) => setHeaderTextScale(Number(e.target.value))}
+                className="w-full accent-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+                <span>Inner Text Size</span>
+                <span>{innerTextScale}%</span>
+              </label>
+              <input 
+                type="range" 
+                min="50" 
+                max="200" 
+                value={innerTextScale} 
+                onChange={(e) => setInnerTextScale(Number(e.target.value))}
+                className="w-full accent-blue-600"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Handle / Top Text</label>
+            <input 
+              type="text" 
+              value={handle} 
+              onChange={(e) => setHandle(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Main Heading</label>
+            <input 
+              type="text" 
+              value={mainTitle} 
+              onChange={(e) => setMainTitle(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Footer Text</label>
+            <input 
+              type="text" 
+              value={footer} 
+              onChange={(e) => setFooter(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Reorder Sections Block */}
+        {sections.length > 0 && (
+          <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+              <List size={14}/> Reorder Sections
+            </h2>
+            <div className="flex flex-col gap-2">
+              {sections.map((sec, idx) => (
+                <div key={sec.id} className="flex items-center justify-between bg-white p-2 border border-gray-200 rounded-lg text-sm shadow-sm">
+                  <span className="font-semibold text-gray-700 truncate pr-2 flex-1">{sec.title || "Untitled Section"}</span>
+                  <div className="flex gap-1">
+                    <button 
+                      disabled={idx === 0} 
+                      onClick={() => moveSection(idx, 'up')} 
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded disabled:opacity-30 transition-colors"
+                      title="Move Up"
+                    >
+                      <ArrowUp size={14}/>
+                    </button>
+                    <button 
+                      disabled={idx === sections.length - 1} 
+                      onClick={() => moveSection(idx, 'down')} 
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded disabled:opacity-30 transition-colors"
+                      title="Move Down"
+                    >
+                      <ArrowDown size={14}/>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sections Editor */}
+        <div className="flex-1 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Type size={14}/> Content Sections ({sections.length})</h2>
+          </div>
+
+          {sections.map((section, idx) => (
+            <div key={section.id} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm relative group">
+              <button 
+                onClick={() => handleRemoveSection(section.id)}
+                className="absolute -top-3 -right-3 bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white shadow-sm"
+                title="Remove Section"
+              >
+                <Trash2 size={14} />
+              </button>
+
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Section Title</label>
+                  <input 
+                    type="text" 
+                    value={section.title} 
+                    onChange={(e) => updateSection(section.id, 'title', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md outline-none text-sm font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Color</label>
+                  <input 
+                    type="color" 
+                    value={section.color} 
+                    onChange={(e) => updateSection(section.id, 'color', e.target.value)}
+                    className="h-9 w-12 p-0.5 border border-gray-300 rounded-md cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Logo/Icon Image (Optional)</label>
+                <div className="flex items-center gap-3">
+                  {section.image && (
+                     <img src={section.image} alt="preview" className="h-10 w-10 object-contain bg-gray-50 border rounded" />
+                  )}
+                  <label className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-md p-2 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <ImageIcon size={16} className="text-gray-400"/>
+                    <span className="text-xs text-gray-500 font-medium">{section.image ? 'Change Image' : 'Upload Image'}</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleImageUpload(e, section.id)}
+                      className="hidden"
+                    />
+                  </label>
+                  {section.image && (
+                     <button onClick={() => updateSection(section.id, 'image', '')} className="text-xs text-red-500 hover:underline">Remove</button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-2">Content Lines</label>
+                <div className="space-y-2 mb-2">
+                  {section.items.map((item, itemIdx) => (
+                    <div key={itemIdx} className="flex gap-2 items-center">
+                      <input 
+                        type="text" 
+                        value={item} 
+                        onChange={(e) => handleUpdateItem(section.id, itemIdx, e.target.value)}
+                        className="flex-1 p-1.5 border border-gray-200 rounded text-sm outline-none focus:border-blue-400 bg-gray-50 focus:bg-white"
+                        placeholder="e.g. 8 NEW POPS ANNOUNCED"
+                      />
+                      <button 
+                        onClick={() => handleRemoveItem(section.id, itemIdx)}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => handleAddItem(section.id)}
+                  className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold"
+                >
+                  <Plus size={12} /> Add Line
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button 
+            onClick={handleAddSection}
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-800 hover:border-gray-800 hover:bg-gray-50 font-bold flex items-center justify-center gap-2 transition-all mb-8"
+          >
+            <Plus size={18} /> ADD NEW SECTION
+          </button>
+        </div>
+      </div>
+
+
+      {/* RIGHT PANEL - PREVIEW AREA */}
+      <div className="flex-1 flex flex-col items-center justify-center overflow-hidden bg-gray-200 pattern-isometric pattern-gray-300 pattern-bg-gray-200 pattern-size-4 pattern-opacity-20 relative">
+        
+        {/* Zoomable Viewport Wrapper */}
+        <div className="w-full h-full overflow-auto flex items-center justify-center p-8">
+          
+          <div 
+            className="relative flex-shrink-0 shadow-2xl transition-transform duration-200 ease-out"
+            style={{ 
+              width: canvasWidth * (zoom / 100), 
+              height: canvasHeight * (zoom / 100) 
+            }}
+          >
+            
+            {/* The Actual Scalable Canvas */}
+            <div 
+              ref={previewRef}
+              className="bg-[#fcfbf6] absolute top-0 left-0 flex flex-col box-border"
+              style={{ 
+                 width: `${canvasWidth}px`, 
+                 height: `${canvasHeight}px`,
+                 transform: `scale(${zoom / 100})`,
+                 transformOrigin: 'top left',
+                 fontSize: `${baseFontSize}px`, // This makes all em units perfectly scale!
+                 padding: '2.5em',
+                 fontFamily: "'Inter', 'Helvetica Neue', sans-serif" 
+              }}
+            >
+              {/* Header Area */}
+              <div className="text-center flex flex-col items-center" style={{ marginBottom: '2em' }}>
+                <h3 className="font-bold tracking-tight text-gray-800" style={{ fontSize: `${1.5 * (headerTextScale / 100)}em` }}>
+                  {handle}
+                </h3>
+                {/* Removed uppercase class below so it respects user input case */}
+                <h1 className="font-black tracking-tighter text-black leading-none mt-1" style={{ fontSize: `${4.5 * (headerTextScale / 100)}em` }}>
+                  {mainTitle}
+                </h1>
+              </div>
+
+              {/* Grid Area - Uses Flex to stretch inside the remaining space */}
+              <div 
+                className={`flex-1 grid ${sections.length === 1 ? 'grid-cols-1 w-full' : 'grid-cols-2'}`}
+                style={{ gap: '1.5em', maxWidth: sections.length === 1 ? '50%' : '100%', margin: sections.length === 1 ? '0 auto' : '0' }}
+              >
+                {sections.map((section) => (
+                  <div 
+                    key={section.id} 
+                    className="bg-white flex flex-col overflow-hidden h-full shadow-[0_4px_0_0_rgba(0,0,0,0.1)] rounded-[1em]"
+                    style={{ border: '0.25em solid #2c3e50' }}
+                  >
+                    {/* Section Title Header */}
+                    <div 
+                      className="text-center"
+                      style={{ backgroundColor: section.color, padding: '0.5em 0.75em', borderBottom: '0.25em solid #2c3e50' }}
+                    >
+                      <h2 className="text-white font-extrabold uppercase leading-tight drop-shadow-sm tracking-wide" style={{ fontSize: `${1.1 * (headerTextScale / 100)}em` }}>
+                        {section.title}
+                      </h2>
+                    </div>
+                    
+                    {/* Section Content */}
+                    <div className="flex-1 flex flex-col items-center justify-center text-center" style={{ padding: '1.5em' }}>
+                      
+                      {/* Image Area - Completely hidden if no image is present */}
+                      {section.image && (
+                        <div className="flex-1 flex items-center justify-center w-full" style={{ minHeight: '5em', marginBottom: '1em' }}>
+                          <img 
+                            src={section.image} 
+                            alt={section.title} 
+                            className="object-contain"
+                            style={{ maxHeight: '7em' }}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Items List */}
+                      <div className="w-full flex flex-col justify-center">
+                        {section.items.map((item, idx) => (
+                          <p 
+                            key={idx} 
+                            className="font-bold text-gray-900 leading-snug tracking-tight"
+                            style={{ fontSize: `${1.1 * (innerTextScale / 100)}em`, margin: '0.15em 0' }}
+                          >
+                            {section.items.length > 2 && idx === 0 && item.includes(' as ') ? (
+                               <span className="flex items-center justify-center gap-2">
+                                  <span className="rounded-full bg-gray-400 inline-block" style={{ width: '0.3em', height: '0.3em' }}></span>
+                                  {item}
+                               </span>
+                            ) : item}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="text-center" style={{ marginTop: '2em' }}>
+                <p className="font-bold text-gray-500 uppercase tracking-widest" style={{ fontSize: `${0.8 * (innerTextScale / 100)}em` }}>
+                  {footer}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
